@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - DR Electrique</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+        :root { 
+            --neon-green: #00ff00; 
+            --neon-purple: #9d00ff;
+            --dark-bg: #0a0a0a;
+            --sidebar-bg: #0f0f0f;
+        }
+        * { box-sizing: border-box; }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background: var(--dark-bg); 
+            min-height: 100vh; 
+            margin: 0;
+            color: #fff;
+        }
+        .font-bebas { font-family: 'Bebas Neue', sans-serif; }
+        .font-mono { font-family: 'Share Tech Mono', monospace; }
+        
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #0a0a0a; }
+        ::-webkit-scrollbar-thumb { background: var(--neon-green); border-radius: 3px; }
+        
+        @keyframes slideIn { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .animate-slide { animation: slideIn 0.3s ease-out; }
+        .animate-fade { animation: fadeIn 0.4s ease-out; }
+        
+        .sidebar {
+            background: var(--sidebar-bg);
+            border-right: 1px solid rgba(157, 0, 255, 0.2);
+            width: 220px;
+            min-height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+        }
+        
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            color: #888;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            cursor: pointer;
+        }
+        .nav-item:hover { background: rgba(0, 255, 0, 0.05); color: #fff; }
+        .nav-item.active {
+            background: rgba(0, 255, 0, 0.1);
+            color: var(--neon-green);
+            border-left-color: var(--neon-green);
+        }
+        
+        .main-content { margin-left: 220px; padding: 20px 30px; min-height: 100vh; }
+        
+        .stat-card {
+            background: linear-gradient(135deg, rgba(20, 20, 20, 0.9), rgba(15, 15, 15, 0.9));
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 20px;
+            transition: all 0.2s;
+        }
+        .stat-card:hover { border-color: rgba(0, 255, 0, 0.3); box-shadow: 0 0 30px rgba(0, 255, 0, 0.1); }
+        
+        .alert-card {
+            background: rgba(255, 100, 100, 0.08);
+            border: 1px solid rgba(255, 100, 100, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+        }
+        
+        .project-row {
+            background: rgba(20, 20, 20, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 16px 20px;
+            transition: all 0.2s;
+        }
+        .project-row:hover { background: rgba(30, 30, 30, 0.8); border-color: rgba(157, 0, 255, 0.3); }
+        
+        .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+        .badge-missing { background: rgba(100, 100, 100, 0.3); color: #aaa; }
+        
+        .report-card {
+            background: rgba(157, 0, 255, 0.05);
+            border: 1px solid rgba(157, 0, 255, 0.2);
+            border-radius: 12px;
+            transition: all 0.3s;
+        }
+        .report-card:hover { background: rgba(157, 0, 255, 0.1); border-color: var(--neon-green); }
+        
+        .extra-card {
+            background: rgba(255, 200, 0, 0.08);
+            border: 1px solid rgba(255, 200, 0, 0.4);
+            border-radius: 12px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--neon-green), #00cc00);
+            color: #000;
+            font-weight: 600;
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-primary:hover { box-shadow: 0 0 25px var(--neon-green); transform: scale(1.02); }
+        
+        input[type="date"] {
+            background: rgba(20, 20, 20, 0.9);
+            border: 1px solid rgba(157, 0, 255, 0.3);
+            color: var(--neon-green);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-family: 'Share Tech Mono', monospace;
+        }
+        input[type="date"]:focus { outline: none; border-color: var(--neon-green); box-shadow: 0 0 15px rgba(0, 255, 0, 0.2); }
+        
+        .section-title {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 14px;
+            letter-spacing: 1px;
+            color: #666;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .photo-grid img {
+            border: 1px solid rgba(157, 0, 255, 0.3);
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+        .photo-grid img:hover { border-color: var(--neon-green); box-shadow: 0 0 20px rgba(0, 255, 0, 0.3); transform: scale(1.05); }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        
+        // ============== SUPABASE CONFIG ==============
+        const SUPABASE_URL = 'https://iawsshgkogntmdzrfjyw.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlhd3NzaGdrb2dudG1kenJmanl3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc2NDkwMDUsImV4cCI6MjA4MzIyNTAwNX0.1BxhI5SWLL5786qsshidOMpTsOrGeNob6xpcKQjI4s4';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        const LOCAL_STORAGE_KEY = 'dr_rapports_database';
+        
+        const EMPLOYES = [
+            { id: 1, nom: "Carl Sylvestre", role: "Contre-maitre" },
+            { id: 2, nom: "Claude Desmarais", role: "Contre-maitre" },
+            { id: 3, nom: "Dany Deslauriers", role: "Contre-maitre" },
+            { id: 4, nom: "Mario Vaillancourt", role: "Contre-maitre" },
+            { id: 5, nom: "Martin Brossard", role: "Contre-maitre" },
+            { id: 6, nom: "Maxime Robert", role: "Contre-maitre" },
+            { id: 7, nom: "Jeremy Dubuc", role: "Contre-maitre" },
+        ];
+        
+        const PROJETS = [
+            { id: "PRJ-001", nom: "Alexis Nihon - Phase 2", client: "Cominar" },
+            { id: "PRJ-002", nom: "Electric Kahnawake", client: "MCK" },
+            { id: "PRJ-003", nom: "Centre Commercial Fairview", client: "Cadillac Fairview" },
+            { id: "PRJ-004", nom: "Data Center Montreal", client: "SIP Electrique" },
+            { id: "PRJ-005", nom: "Tour des Canadiens 4", client: "Canderel" },
+        ];
+        
+        const getTodayStr = () => new Date().toISOString().split('T')[0];
+        const formatDate = (d) => new Date(d).toLocaleDateString('fr-CA');
+        
+        const Icons = {
+            dashboard: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>,
+            file: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8"/></svg>,
+            clipboard: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>,
+            users: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
+            camera: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>,
+            dollar: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>,
+            clock: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>,
+            alert: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>,
+            check: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6L9 17l-5-5"/></svg>,
+            chevronDown: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9l6 6 6-6"/></svg>,
+            chevronUp: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 15l-6-6-6 6"/></svg>,
+        };
+        
+        const Sidebar = ({ activeTab, setActiveTab }) => (
+            <div className="sidebar">
+                <div className="p-4 border-b border-white/10">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg flex items-center justify-center font-bebas text-lg" 
+                             style={{background: 'linear-gradient(135deg, #00ff00, #00aa00)', color: '#000', boxShadow: '0 0 20px rgba(0,255,0,0.4)'}}>
+                            DR
+                        </div>
+                        <div>
+                            <div className="font-bebas text-sm tracking-wide" style={{color: '#00ff00'}}>GROUPE DR ELECTRIQUE</div>
+                            <div className="text-[10px] text-gray-500">Plateforme Chantier</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div className="py-4">
+                    <div className="px-4 text-[10px] text-gray-600 uppercase tracking-wider mb-2">Navigation</div>
+                    
+                    <div className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => setActiveTab('dashboard')}>
+                        {Icons.dashboard} <span>Dashboard</span>
+                    </div>
+                    <div className={`nav-item ${activeTab === 'rapports' ? 'active' : ''}`} onClick={() => setActiveTab('rapports')}>
+                        {Icons.file} <span>Rapports Journaliers</span>
+                    </div>
+                    <div className={`nav-item ${activeTab === 'ordres' ? 'active' : ''}`} onClick={() => setActiveTab('ordres')}>
+                        {Icons.clipboard} <span>Ordres de Travail</span>
+                    </div>
+                    <div className={`nav-item ${activeTab === 'reunions' ? 'active' : ''}`} onClick={() => setActiveTab('reunions')}>
+                        {Icons.users} <span>Reunions</span>
+                    </div>
+                    <div className={`nav-item ${activeTab === 'photos' ? 'active' : ''}`} onClick={() => setActiveTab('photos')}>
+                        {Icons.camera} <span>Photos</span>
+                    </div>
+                    <div className={`nav-item ${activeTab === 'extras' ? 'active' : ''}`} onClick={() => setActiveTab('extras')}>
+                        {Icons.dollar} <span>Extras a Facturer</span>
+                    </div>
+                </div>
+            </div>
+        );
+        
+        const Header = ({ userName, selectedDate, setSelectedDate }) => (
+            <div className="flex items-center justify-between mb-6">
+                <h1 className="font-bebas text-2xl tracking-wide" style={{color: '#00ff00', textShadow: '0 0 10px rgba(0,255,0,0.3)'}}>
+                    TABLEAU DE BORD
+                </h1>
+                <div className="flex items-center gap-4">
+                    <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
+                    <div className="flex items-center gap-2">
+                        <span className="text-gray-400 text-sm">{userName}</span>
+                        <div className="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold text-sm">F</div>
+                    </div>
+                </div>
+            </div>
+        );
+        
+        const DashboardView = ({ rapports, selectedDate }) => {
+            const todayRapports = rapports.filter(r => r.date === selectedDate);
+            const contreMaitres = EMPLOYES.filter(e => e.role === "Contre-maitre");
+            const submittedBy = todayRapports.map(r => r.redacteur);
+            const missing = contreMaitres.filter(cm => !submittedBy.includes(cm.nom));
+            
+            const totalHeures = todayRapports.reduce((acc, r) => acc + (r.totalHeuresMO || 0), 0);
+            const totalOrdres = todayRapports.reduce((acc, r) => acc + (r.ordresTravail?.length || 0), 0);
+            const totalReunions = todayRapports.filter(r => r.reunions && r.reunions.trim && r.reunions.trim()).length;
+            
+            const projetStats = PROJETS.map(p => {
+                const projRapports = todayRapports.filter(r => r.projet === p.id);
+                const heures = projRapports.reduce((acc, r) => acc + (r.totalHeuresMO || 0), 0);
+                const ordres = projRapports.reduce((acc, r) => acc + (r.ordresTravail?.filter(o => o.isExtra)?.length || 0), 0);
+                return { ...p, rapports: projRapports.length, heures, ordres };
+            });
+            
+            return (
+                <div className="animate-fade">
+                    {missing.length > 0 && (
+                        <div className="alert-card mb-6">
+                            <div className="flex items-center gap-3 mb-3">
+                                {Icons.alert}
+                                <div>
+                                    <div className="font-medium" style={{color: '#ff6b6b'}}>Rapports manquants aujourd'hui</div>
+                                    <div className="text-xs text-gray-400">{missing.length} employe(s)</div>
+                                </div>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                                {missing.map(emp => (
+                                    <span key={emp.id} className="badge badge-missing">{emp.nom}</span>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                    
+                    <div className="grid grid-cols-4 gap-4 mb-6">
+                        <div className="stat-card">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <div className="text-xs text-gray-500 mb-1">Rapports aujourd'hui</div>
+                                    <div className="text-3xl font-bebas" style={{color: '#00ff00'}}>{todayRapports.length}</div>
+                                    <div className="text-xs text-gray-600">sur {contreMaitres.length} employes</div>
+                                </div>
+                                <div className="text-green-500 opacity-50">{Icons.file}</div>
+                            </div>
+                        </div>
+                        
+                        <div className="stat-card">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <div className="text-xs text-gray-500 mb-1">Heures aujourd'hui</div>
+                                    <div className="text-3xl font-bebas" style={{color: '#ffc800'}}>{totalHeures.toFixed(0)}h</div>
+                                </div>
+                                <div className="text-yellow-500 opacity-50">{Icons.clock}</div>
+                            </div>
+                        </div>
+                        
+                        <div className="stat-card">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <div className="text-xs text-gray-500 mb-1">Ordres actifs</div>
+                                    <div className="text-3xl font-bebas" style={{color: '#9d00ff'}}>{totalOrdres}</div>
+                                </div>
+                                <div className="text-purple-500 opacity-50">{Icons.clipboard}</div>
+                            </div>
+                        </div>
+                        
+                        <div className="stat-card">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <div className="text-xs text-gray-500 mb-1">Reunions aujourd'hui</div>
+                                    <div className="text-3xl font-bebas" style={{color: '#00d4ff'}}>{totalReunions}</div>
+                                </div>
+                                <div className="text-cyan-500 opacity-50">{Icons.users}</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div className="section-title">ACTIVITE PAR PROJET</div>
+                    <div className="space-y-3">
+                        {projetStats.map(projet => (
+                            <div key={projet.id} className="project-row flex items-center justify-between">
+                                <div>
+                                    <div className="font-medium">{projet.nom}</div>
+                                    <div className="text-xs text-gray-500">{projet.client}</div>
+                                </div>
+                                <div className="flex items-center gap-6 text-sm">
+                                    <span className="text-gray-400">{projet.rapports} rapports</span>
+                                    <span style={{color: '#ffc800'}}>{projet.heures}h</span>
+                                    <span style={{color: '#9d00ff'}}>{projet.ordres} ordres</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+        
+        const RapportsView = ({ rapports, selectedDate }) => {
+            const [expandedId, setExpandedId] = useState(null);
+            const todayRapports = rapports.filter(r => r.date === selectedDate);
+            
+            return (
+                <div className="animate-fade">
+                    <div className="section-title">RAPPORTS DU {formatDate(selectedDate)} ({todayRapports.length})</div>
+                    {todayRapports.length === 0 ? (
+                        <div className="text-center py-16 text-gray-500"><div className="text-4xl mb-4">📭</div>Aucun rapport pour cette date</div>
+                    ) : (
+                        <div className="space-y-4">
+                            {todayRapports.map(rapport => {
+                                const projet = PROJETS.find(p => p.id === rapport.projet);
+                                const isExpanded = expandedId === rapport.id;
+                                return (
+                                    <div key={rapport.id} className="report-card overflow-hidden">
+                                        <div className="p-4 cursor-pointer flex items-center justify-between" onClick={() => setExpandedId(isExpanded ? null : rapport.id)}>
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{background: 'rgba(0,255,0,0.1)', border: '1px solid rgba(0,255,0,0.3)'}}>{Icons.file}</div>
+                                                <div>
+                                                    <div className="font-medium">{rapport.redacteur}</div>
+                                                    <div className="text-xs text-gray-500">{projet?.nom}</div>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-4">
+                                                <span className="text-sm" style={{color: '#ffc800'}}>{rapport.totalHeuresMO?.toFixed(1)}h</span>
+                                                <span className="text-sm text-gray-500">{rapport.totalPhotos} photos</span>
+                                                {rapport.hasExtras && <span className="px-2 py-1 rounded text-xs font-bold" style={{background: 'rgba(255,200,0,0.2)', color: '#ffc800'}}>${rapport.totalExtras}</span>}
+                                                <span className="text-gray-500">{isExpanded ? Icons.chevronUp : Icons.chevronDown}</span>
+                                            </div>
+                                        </div>
+                                        {isExpanded && (
+                                            <div className="border-t border-white/10 p-4 bg-black/30 space-y-4">
+                                                {rapport.mainOeuvre?.filter(m => m.employe).length > 0 && (
+                                                    <div>
+                                                        <div className="text-xs text-green-400 mb-2 font-mono">MAIN D'OEUVRE</div>
+                                                        {rapport.mainOeuvre.filter(m => m.employe).map((m, i) => (
+                                                            <div key={i} className="text-sm text-gray-300">{m.employe}: {m.heureDebut} - {m.heureFin}</div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                                {rapport.materiaux?.filter(m => m.item).length > 0 && (
+                                                    <div>
+                                                        <div className="text-xs text-green-400 mb-2 font-mono">MATERIAUX</div>
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {rapport.materiaux.filter(m => m.item).map((m, i) => (
+                                                                <span key={i} className="px-2 py-1 rounded text-xs" style={{background: 'rgba(157,0,255,0.2)', color: '#9d00ff'}}>{m.item} x{m.quantite}</span>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                {rapport.notesGenerales && (
+                                                    <div>
+                                                        <div className="text-xs text-green-400 mb-2 font-mono">NOTES</div>
+                                                        <div className="text-sm text-gray-300">{rapport.notesGenerales}</div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
+            );
+        };
+        
+        const OrdresView = ({ rapports, selectedDate }) => {
+            const allOrdres = rapports.filter(r => r.date === selectedDate).flatMap(r => (r.ordresTravail || []).map(o => ({ ...o, rapport: r }))).filter(o => o.description);
+            return (
+                <div className="animate-fade">
+                    <div className="section-title">ORDRES DE TRAVAIL ({allOrdres.length})</div>
+                    {allOrdres.length === 0 ? (
+                        <div className="text-center py-16 text-gray-500"><div className="text-4xl mb-4">📋</div>Aucun ordre de travail</div>
+                    ) : (
+                        <div className="space-y-3">
+                            {allOrdres.map((ordre, i) => (
+                                <div key={i} className={`p-4 rounded-xl ${ordre.isExtra ? 'extra-card' : 'report-card'}`}>
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <div className="font-medium">{ordre.description}</div>
+                                            <div className="text-xs text-gray-500">{ordre.rapport.redacteur}</div>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <span className={`px-2 py-1 rounded text-xs ${ordre.status === 'complete' ? 'bg-green-500/20 text-green-400' : ordre.status === 'bloque' ? 'bg-red-500/20 text-red-400' : 'bg-blue-500/20 text-blue-400'}`}>{ordre.status || 'en_cours'}</span>
+                                            {ordre.isExtra && <span className="font-bold" style={{color: '#ffc800'}}>${ordre.montantExtra}</span>}
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            );
+        };
+        
+        const ReunionsView = ({ rapports, selectedDate }) => {
+            const reunions = rapports.filter(r => r.date === selectedDate && r.reunions && typeof r.reunions === 'string' && r.reunions.trim()).map(r => ({ texte: r.reunions, redacteur: r.redacteur, projet: PROJETS.find(p => p.id === r.projet)?.nom }));
+            return (
+                <div className="animate-fade">
+                    <div className="section-title">REUNIONS ({reunions.length})</div>
+                    {reunions.length === 0 ? (
+                        <div className="text-center py-16 text-gray-500"><div className="text-4xl mb-4">👥</div>Aucune reunion enregistree</div>
+                    ) : (
+                        <div className="space-y-4">
+                            {reunions.map((r, i) => (
+                                <div key={i} className="report-card p-4">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <span className="text-sm font-medium">{r.redacteur}</span>
+                                        <span className="text-xs text-gray-500">- {r.projet}</span>
+                                    </div>
+                                    <div className="text-gray-300 whitespace-pre-wrap">{r.texte}</div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            );
+        };
+        
+        const PhotosView = ({ rapports, selectedDate }) => {
+            const allPhotos = rapports.filter(r => r.date === selectedDate).flatMap(r => {
+                const photos = [];
+                (r.photosGenerales || []).forEach(p => photos.push({ ...(typeof p === 'object' ? p : {data: p}), type: 'Generale', redacteur: r.redacteur }));
+                (r.photosAvant || []).forEach(p => photos.push({ ...(typeof p === 'object' ? p : {data: p}), type: 'Avant', redacteur: r.redacteur }));
+                (r.photosApres || []).forEach(p => photos.push({ ...(typeof p === 'object' ? p : {data: p}), type: 'Apres', redacteur: r.redacteur }));
+                (r.photosProblemes || []).forEach(p => photos.push({ ...(typeof p === 'object' ? p : {data: p}), type: 'Probleme', redacteur: r.redacteur }));
+                return photos;
+            });
+            return (
+                <div className="animate-fade">
+                    <div className="section-title">PHOTOS ({allPhotos.length})</div>
+                    {allPhotos.length === 0 ? (
+                        <div className="text-center py-16 text-gray-500"><div className="text-4xl mb-4">📷</div>Aucune photo</div>
+                    ) : (
+                        <div className="photo-grid grid grid-cols-4 md:grid-cols-6 gap-4">
+                            {allPhotos.map((photo, i) => (
+                                <div key={i} className="relative group">
+                                    <img src={photo.data} alt="" className="w-full aspect-square object-cover rounded-lg cursor-pointer" />
+                                    <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex flex-col items-center justify-center text-xs">
+                                        <span className="text-white">{photo.redacteur}</span>
+                                        <span className={`px-2 py-0.5 rounded mt-1 ${photo.type === 'Probleme' ? 'bg-red-500' : 'bg-purple-500'}`}>{photo.type}</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            );
+        };
+        
+        const ExtrasView = ({ rapports, onMarkFacture }) => {
+            const allExtras = rapports.filter(r => r.hasExtras && !r.extrasFactures).map(r => ({ ...r, projet: PROJETS.find(p => p.id === r.projet)?.nom, extras: r.ordresTravail?.filter(o => o.isExtra) || [] }));
+            const totalUnbilled = allExtras.reduce((acc, r) => acc + (r.totalExtras || 0), 0);
+            return (
+                <div className="animate-fade">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="section-title mb-0 border-0 pb-0">EXTRAS A FACTURER</div>
+                        <div className="text-2xl font-bebas" style={{color: '#ffc800'}}>${totalUnbilled.toLocaleString()}</div>
+                    </div>
+                    {allExtras.length === 0 ? (
+                        <div className="text-center py-16" style={{color: '#00ff00'}}><div className="text-4xl mb-4">✓</div>Tous les extras sont factures!</div>
+                    ) : (
+                        <div className="space-y-4">
+                            {allExtras.map(rapport => (
+                                <div key={rapport.id} className="extra-card p-4">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <div>
+                                            <div className="font-medium">{rapport.redacteur}</div>
+                                            <div className="text-xs text-gray-400">{rapport.projet} - {formatDate(rapport.date)}</div>
+                                        </div>
+                                        <div className="text-2xl font-bebas" style={{color: '#ffc800'}}>${rapport.totalExtras}</div>
+                                    </div>
+                                    {rapport.extras.map((extra, i) => (
+                                        <div key={i} className="text-sm mb-1 text-gray-300">• {extra.description} - <span style={{color: '#ffc800'}}>${extra.montantExtra}</span></div>
+                                    ))}
+                                    <button onClick={() => onMarkFacture(rapport.id)} className="btn-primary w-full mt-4 text-sm">{Icons.check} MARQUER FACTURE</button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            );
+        };
+        
+        const App = () => {
+            const [activeTab, setActiveTab] = useState('dashboard');
+            const [rapports, setRapports] = useState([]);
+            const [selectedDate, setSelectedDate] = useState(getTodayStr());
+            
+            const loadRapports = async () => {
+                const data = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '[]');
+                setRapports(data);
+            };
+            
+            useEffect(() => {
+                loadRapports();
+                const interval = setInterval(loadRapports, 30000);
+                return () => clearInterval(interval);
+            }, []);
+            
+            const markFacture = async (rapportId) => {
+                const { error } = await supabase.from('rapports').update({ extras_factures: true }).eq('id', rapportId);
+                if (error) { console.error('Supabase error:', error); return; }
+                loadRapports();
+            };
+            
+            const renderContent = () => {
+                switch(activeTab) {
+                    case 'dashboard': return <DashboardView rapports={rapports} selectedDate={selectedDate} />;
+                    case 'rapports': return <RapportsView rapports={rapports} selectedDate={selectedDate} />;
+                    case 'ordres': return <OrdresView rapports={rapports} selectedDate={selectedDate} />;
+                    case 'reunions': return <ReunionsView rapports={rapports} selectedDate={selectedDate} />;
+                    case 'photos': return <PhotosView rapports={rapports} selectedDate={selectedDate} />;
+                    case 'extras': return <ExtrasView rapports={rapports} onMarkFacture={markFacture} />;
+                    default: return <DashboardView rapports={rapports} selectedDate={selectedDate} />;
+                }
+            };
+            
+            return (
+                <div>
+                    <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+                    <div className="main-content">
+                        <Header userName="Francis Vegiard" selectedDate={selectedDate} setSelectedDate={setSelectedDate} />
+                        {renderContent()}
+                    </div>
+                </div>
+            );
+        };
+        
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
+</body>
+</html>

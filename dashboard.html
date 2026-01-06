@@ -160,22 +160,40 @@
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         
         const LOCAL_STORAGE_KEY = 'dr_rapports_database';
+
+        // Conversion snake_case -> camelCase
+        const snakeToCamel = (obj) => {
+            if (Array.isArray(obj)) return obj.map(snakeToCamel);
+            if (obj !== null && typeof obj === 'object') {
+                return Object.keys(obj).reduce((acc, key) => {
+                    const camelKey = key.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+                    acc[camelKey] = snakeToCamel(obj[key]);
+                    return acc;
+                }, {});
+            }
+            return obj;
+        };
+        
+
         
         const EMPLOYES = [
-            { id: 1, nom: "Carl Sylvestre", role: "Contre-maitre" },
-            { id: 2, nom: "Claude Desmarais", role: "Contre-maitre" },
-            { id: 3, nom: "Dany Deslauriers", role: "Contre-maitre" },
-            { id: 4, nom: "Mario Vaillancourt", role: "Contre-maitre" },
-            { id: 5, nom: "Martin Brossard", role: "Contre-maitre" },
-            { id: 6, nom: "Maxime Robert", role: "Contre-maitre" },
-            { id: 7, nom: "Jeremy Dubuc", role: "Contre-maitre" },
+            { id: 1, nom: "Carl Sylvestre", role: "Contremaître" },
+            { id: 2, nom: "Claude Desmarais", role: "Contremaître" },
+            { id: 3, nom: "Dany Deslauriers", role: "Contremaître" },
+            { id: 4, nom: "Mario Vaillancourt", role: "Contremaître" },
+            { id: 5, nom: "Martin Brossard", role: "Contremaître" },
+            { id: 6, nom: "Maxime Robert", role: "Contremaître" },
+            { id: 7, nom: "Jeremy Dubuc", role: "Contremaître" },
+            { id: 8, nom: "Marc-André Tremblay", role: "Contremaître" },
+            { id: 9, nom: "David Côté", role: "Contremaître" },
+            { id: 10, nom: "Alexandre Bouchard", role: "Contremaître" },
         ];
         
         const PROJETS = [
             { id: "PRJ-001", nom: "Alexis Nihon - Phase 2", client: "Cominar" },
             { id: "PRJ-002", nom: "Electric Kahnawake", client: "MCK" },
-            { id: "PRJ-003", nom: "Centre Commercial Fairview", client: "Cadillac Fairview" },
-            { id: "PRJ-004", nom: "Data Center Montreal", client: "SIP Electrique" },
+            { id: "PRJ-003", nom: "Fairview Pointe-Claire", client: "Cadillac Fairview" },
+            { id: "PRJ-004", nom: "Data Center MTL-01", client: "SIP Électrique" },
             { id: "PRJ-005", nom: "Tour des Canadiens 4", client: "Canderel" },
         ];
         
@@ -253,7 +271,7 @@
         
         const DashboardView = ({ rapports, selectedDate }) => {
             const todayRapports = rapports.filter(r => r.date === selectedDate);
-            const contreMaitres = EMPLOYES.filter(e => e.role === "Contre-maitre");
+            const contreMaitres = EMPLOYES.filter(e => e.role === "Contremaître");
             const submittedBy = todayRapports.map(r => r.redacteur);
             const missing = contreMaitres.filter(cm => !submittedBy.includes(cm.nom));
             
@@ -542,8 +560,35 @@
             const [selectedDate, setSelectedDate] = useState(getTodayStr());
             
             const loadRapports = async () => {
-                const data = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '[]');
-                setRapports(data);
+                try {
+                    // Charger rapports
+                    const { data: rapportsData, error: rapportsError } = await supabase
+                        .from('rapports')
+                        .select('*')
+                        .order('created_at', { ascending: false });
+                    if (rapportsError) throw rapportsError;
+                    
+                    // Charger photos
+                    const { data: photosData, error: photosError } = await supabase
+                        .from('photos')
+                        .select('*');
+                    
+                    // Convertir snake_case -> camelCase
+                    const converted = (rapportsData || []).map(r => {
+                        const rapport = snakeToCamel(r);
+                        // Attacher les photos au rapport
+                        const rapportPhotos = (photosData || []).filter(p => p.rapport_id === r.id);
+                        rapport.photosGenerales = rapportPhotos.filter(p => p.category === 'GENERAL').map(p => ({data: p.url, geolocation: {latitude: p.latitude, longitude: p.longitude}}));
+                        rapport.photosAvant = rapportPhotos.filter(p => p.category === 'AVANT').map(p => ({data: p.url, geolocation: {latitude: p.latitude, longitude: p.longitude}}));
+                        rapport.photosApres = rapportPhotos.filter(p => p.category === 'APRES').map(p => ({data: p.url, geolocation: {latitude: p.latitude, longitude: p.longitude}}));
+                        rapport.photosProblemes = rapportPhotos.filter(p => p.category === 'PROBLEME').map(p => ({data: p.url, geolocation: {latitude: p.latitude, longitude: p.longitude}}));
+                        return rapport;
+                    });
+                    setRapports(converted);
+                } catch (err) {
+                    console.error('Erreur Supabase:', err);
+                    setRapports([]);
+                }
             };
             
             useEffect(() => {

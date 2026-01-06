@@ -797,8 +797,9 @@
                     await submitRapport(rapport);
                     setStep('success');
                 } catch (error) {
+                    console.error('Submit error:', error);
                     savePendingRapport(rapport);
-                    setStep('success');
+                    setStep('offline');
                 }
             };
             
@@ -849,6 +850,31 @@
                 );
             }
             
+            
+            // OFFLINE SCREEN
+            if (step === 'offline') {
+                return (
+                    <div className="min-h-screen flex items-center justify-center p-6">
+                        <div className="glass rounded-3xl p-8 text-center max-w-sm w-full animate-slide-up">
+                            <div className="w-24 h-24 bg-yellow-500/10 rounded-full flex items-center justify-center mx-auto mb-6 border-2 border-yellow-500/30">
+                                <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="#eab308" strokeWidth="2">
+                                    <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                                </svg>
+                            </div>
+                            <h2 className="font-bebas text-3xl text-white mb-2">SAUVEGARDÉ LOCALEMENT</h2>
+                            <p className="text-yellow-400 mb-1">Connexion échouée</p>
+                            <p className="text-sm text-gray-500 mb-8">Ton rapport est sauvegardé localement et sera envoyé automatiquement quand la connexion sera rétablie.</p>
+                            <button 
+                                onClick={resetForm}
+                                className="w-full py-4 bg-yellow-600 text-white font-bebas text-lg tracking-wide rounded-xl active:scale-[0.98] transition-transform"
+                            >
+                                NOUVEAU RAPPORT
+                            </button>
+                        </div>
+                    </div>
+                );
+            }
+
             // SUBMITTING SCREEN
             if (step === 'submitting') {
                 return (

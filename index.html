@@ -128,16 +128,26 @@
         // ============== CONFIG ==============
         
         const EMPLOYES = [
-            { id: 1, nom: "Marc-André Tremblay", role: "Contremaître" },
-            { id: 2, nom: "Jean-François Lavoie", role: "Électricien" },
-            { id: 3, nom: "Patrick Gagnon", role: "Électricien" },
-            { id: 4, nom: "Sébastien Roy", role: "Apprenti 4e" },
-            { id: 5, nom: "David Côté", role: "Électricien" },
-            { id: 6, nom: "Alexandre Bouchard", role: "Contremaître" },
-            { id: 7, nom: "Mathieu Pelletier", role: "Électricien" },
-            { id: 8, nom: "Simon Gauthier", role: "Apprenti 3e" },
-            { id: 9, nom: "Éric Fortin", role: "Électricien" },
-            { id: 10, nom: "François Morin", role: "Électricien" }
+            { id: 1, nom: "Carl Sylvestre", role: "Contremaître" },
+            { id: 2, nom: "Claude Desmarais", role: "Contremaître" },
+            { id: 3, nom: "Dany Deslauriers", role: "Contremaître" },
+            { id: 4, nom: "Mario Vaillancourt", role: "Contremaître" },
+            { id: 5, nom: "Martin Brossard", role: "Contremaître" },
+            { id: 6, nom: "Maxime Robert", role: "Contremaître" },
+            { id: 7, nom: "Jeremy Dubuc", role: "Contremaître" },
+            { id: 8, nom: "Marc-André Tremblay", role: "Contremaître" },
+            { id: 9, nom: "David Côté", role: "Contremaître" },
+            { id: 10, nom: "Alexandre Bouchard", role: "Contremaître" }
+        ];
+        
+        // Workers for main d'oeuvre (includes all staff)
+        const WORKERS = [
+            "Carl Sylvestre", "Claude Desmarais", "Dany Deslauriers", 
+            "Mario Vaillancourt", "Martin Brossard", "Maxime Robert",
+            "Jeremy Dubuc", "Marc-André Tremblay", "David Côté", "Alexandre Bouchard",
+            "Jean-François Lavoie", "Patrick Gagnon", "Sébastien Roy",
+            "Mathieu Pelletier", "Simon Gauthier", "Éric Fortin", "François Morin",
+            "Michel Leblanc", "Pierre Gagnon", "Robert Tremblay"
         ];
         
         const PROJETS = [
@@ -933,7 +943,7 @@
                                             className="flex-1 px-3 py-3 rounded-xl mr-2"
                                         >
                                             <option value="">Sélectionner employé</option>
-                                            {EMPLOYES.map(e => <option key={e.id} value={e.nom}>{e.nom}</option>)}
+                                            {WORKERS.map((w, i) => <option key={i} value={w}>{w}</option>)}
                                         </select>
                                         <button 
                                             type="button"

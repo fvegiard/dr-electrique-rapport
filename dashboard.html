@@ -88,6 +88,7 @@
             border-radius: 8px;
             padding: 16px 20px;
             transition: all 0.2s;
+            cursor: pointer;
         }
         .project-row:hover { background: rgba(30, 30, 30, 0.8); border-color: rgba(157, 0, 255, 0.3); }
         
@@ -146,6 +147,41 @@
             transition: all 0.2s;
         }
         .photo-grid img:hover { border-color: var(--neon-green); box-shadow: 0 0 20px rgba(0, 255, 0, 0.3); transform: scale(1.05); }
+        
+        .photo-placeholder {
+            aspect-ratio: 1;
+            background: linear-gradient(135deg, rgba(157, 0, 255, 0.2), rgba(0, 255, 0, 0.1));
+            border: 1px solid rgba(157, 0, 255, 0.3);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+        }
+        
+        .ordre-card {
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .ordre-card:hover {
+            transform: translateX(5px);
+        }
+        .ordre-expanded {
+            background: rgba(0, 0, 0, 0.3);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 12px;
+            margin-top: 12px;
+        }
+        
+        .clickable-stat {
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .clickable-stat:hover {
+            text-decoration: underline;
+            color: var(--neon-green);
+        }
     </style>
 </head>
 <body>
@@ -174,6 +210,35 @@
             return obj;
         };
         
+        // FIX: Parse reunions data - handles both string and array formats
+        const parseReunions = (reunionsData) => {
+            if (!reunionsData) return [];
+            
+            // If it's already an array of objects
+            if (Array.isArray(reunionsData)) {
+                return reunionsData.filter(r => r && (r.notes || r.type || r.participants));
+            }
+            
+            // If it's a string
+            if (typeof reunionsData === 'string') {
+                const trimmed = reunionsData.trim();
+                if (!trimmed) return [];
+                
+                // Try to parse as JSON
+                try {
+                    const parsed = JSON.parse(trimmed);
+                    if (Array.isArray(parsed)) {
+                        return parsed.filter(r => r && (r.notes || r.type || r.participants));
+                    }
+                    return [{ notes: trimmed }];
+                } catch {
+                    // It's just a plain text note
+                    return [{ notes: trimmed }];
+                }
+            }
+            
+            return [];
+        };
 
         
         const EMPLOYES = [
@@ -212,6 +277,8 @@
             check: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6L9 17l-5-5"/></svg>,
             chevronDown: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9l6 6 6-6"/></svg>,
             chevronUp: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 15l-6-6-6 6"/></svg>,
+            image: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>,
+            mapPin: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>,
         };
         
         const Sidebar = ({ activeTab, setActiveTab }) => (
@@ -269,7 +336,7 @@
             </div>
         );
         
-        const DashboardView = ({ rapports, selectedDate }) => {
+        const DashboardView = ({ rapports, selectedDate, setActiveTab, setFilterProjet }) => {
             const todayRapports = rapports.filter(r => r.date === selectedDate);
             const contreMaitres = EMPLOYES.filter(e => e.role === "Contremaître");
             const submittedBy = todayRapports.map(r => r.redacteur);
@@ -277,7 +344,12 @@
             
             const totalHeures = todayRapports.reduce((acc, r) => acc + (r.totalHeuresMO || 0), 0);
             const totalOrdres = todayRapports.reduce((acc, r) => acc + (r.ordresTravail?.length || 0), 0);
-            const totalReunions = todayRapports.filter(r => r.reunions && r.reunions.trim && r.reunions.trim()).length;
+            
+            // FIX: Count reunions properly using parseReunions
+            const totalReunions = todayRapports.reduce((acc, r) => {
+                const parsed = parseReunions(r.reunions);
+                return acc + parsed.length;
+            }, 0);
             
             const projetStats = PROJETS.map(p => {
                 const projRapports = todayRapports.filter(r => r.projet === p.id);
@@ -285,6 +357,12 @@
                 const ordres = projRapports.reduce((acc, r) => acc + (r.ordresTravail?.filter(o => o.isExtra)?.length || 0), 0);
                 return { ...p, rapports: projRapports.length, heures, ordres };
             });
+            
+            // FIX: Clickable project navigation
+            const handleProjectClick = (projetId) => {
+                setFilterProjet(projetId);
+                setActiveTab('rapports');
+            };
             
             return (
                 <div className="animate-fade">
@@ -306,7 +384,7 @@
                     )}
                     
                     <div className="grid grid-cols-4 gap-4 mb-6">
-                        <div className="stat-card">
+                        <div className="stat-card" onClick={() => setActiveTab('rapports')} style={{cursor: 'pointer'}}>
                             <div className="flex items-center justify-between">
                                 <div>
                                     <div className="text-xs text-gray-500 mb-1">Rapports aujourd'hui</div>
@@ -327,7 +405,7 @@
                             </div>
                         </div>
                         
-                        <div className="stat-card">
+                        <div className="stat-card" onClick={() => setActiveTab('ordres')} style={{cursor: 'pointer'}}>
                             <div className="flex items-center justify-between">
                                 <div>
                                     <div className="text-xs text-gray-500 mb-1">Ordres actifs</div>
@@ -337,7 +415,7 @@
                             </div>
                         </div>
                         
-                        <div className="stat-card">
+                        <div className="stat-card" onClick={() => setActiveTab('reunions')} style={{cursor: 'pointer'}}>
                             <div className="flex items-center justify-between">
                                 <div>
                                     <div className="text-xs text-gray-500 mb-1">Reunions aujourd'hui</div>
@@ -351,15 +429,15 @@
                     <div className="section-title">ACTIVITE PAR PROJET</div>
                     <div className="space-y-3">
                         {projetStats.map(projet => (
-                            <div key={projet.id} className="project-row flex items-center justify-between">
+                            <div key={projet.id} className="project-row flex items-center justify-between" onClick={() => handleProjectClick(projet.id)}>
                                 <div>
                                     <div className="font-medium">{projet.nom}</div>
                                     <div className="text-xs text-gray-500">{projet.client}</div>
                                 </div>
                                 <div className="flex items-center gap-6 text-sm">
-                                    <span className="text-gray-400">{projet.rapports} rapports</span>
+                                    <span className="clickable-stat">{projet.rapports} rapports</span>
                                     <span style={{color: '#ffc800'}}>{projet.heures}h</span>
-                                    <span style={{color: '#9d00ff'}}>{projet.ordres} ordres</span>
+                                    <span className="clickable-stat" style={{color: '#9d00ff'}}>{projet.ordres} ordres</span>
                                 </div>
                             </div>
                         ))}
@@ -368,13 +446,28 @@
             );
         };
         
-        const RapportsView = ({ rapports, selectedDate }) => {
+        const RapportsView = ({ rapports, selectedDate, filterProjet, setFilterProjet }) => {
             const [expandedId, setExpandedId] = useState(null);
-            const todayRapports = rapports.filter(r => r.date === selectedDate);
+            let todayRapports = rapports.filter(r => r.date === selectedDate);
+            
+            // Apply project filter if set
+            if (filterProjet) {
+                todayRapports = todayRapports.filter(r => r.projet === filterProjet);
+            }
             
             return (
                 <div className="animate-fade">
-                    <div className="section-title">RAPPORTS DU {formatDate(selectedDate)} ({todayRapports.length})</div>
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="section-title mb-0 border-0 pb-0">RAPPORTS DU {formatDate(selectedDate)} ({todayRapports.length})</div>
+                        {filterProjet && (
+                            <button 
+                                onClick={() => setFilterProjet(null)}
+                                className="text-xs px-3 py-1 bg-purple-600/20 text-purple-400 rounded-full hover:bg-purple-600/30"
+                            >
+                                ✕ Effacer filtre
+                            </button>
+                        )}
+                    </div>
                     {todayRapports.length === 0 ? (
                         <div className="text-center py-16 text-gray-500"><div className="text-4xl mb-4">📭</div>Aucun rapport pour cette date</div>
                     ) : (
@@ -436,8 +529,11 @@
             );
         };
         
+        // FIX: OrdresView with expandable details
         const OrdresView = ({ rapports, selectedDate }) => {
+            const [expandedId, setExpandedId] = useState(null);
             const allOrdres = rapports.filter(r => r.date === selectedDate).flatMap(r => (r.ordresTravail || []).map(o => ({ ...o, rapport: r }))).filter(o => o.description);
+            
             return (
                 <div className="animate-fade">
                     <div className="section-title">ORDRES DE TRAVAIL ({allOrdres.length})</div>
@@ -445,28 +541,73 @@
                         <div className="text-center py-16 text-gray-500"><div className="text-4xl mb-4">📋</div>Aucun ordre de travail</div>
                     ) : (
                         <div className="space-y-3">
-                            {allOrdres.map((ordre, i) => (
-                                <div key={i} className={`p-4 rounded-xl ${ordre.isExtra ? 'extra-card' : 'report-card'}`}>
-                                    <div className="flex items-center justify-between">
-                                        <div>
-                                            <div className="font-medium">{ordre.description}</div>
-                                            <div className="text-xs text-gray-500">{ordre.rapport.redacteur}</div>
+                            {allOrdres.map((ordre, i) => {
+                                const isExpanded = expandedId === i;
+                                const projet = PROJETS.find(p => p.id === ordre.rapport.projet);
+                                return (
+                                    <div key={i} className={`p-4 rounded-xl ordre-card ${ordre.isExtra ? 'extra-card' : 'report-card'}`} onClick={() => setExpandedId(isExpanded ? null : i)}>
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <div className="font-medium">{ordre.description}</div>
+                                                <div className="text-xs text-gray-500">{ordre.rapport.redacteur}</div>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <span className={`px-2 py-1 rounded text-xs ${ordre.status === 'complete' ? 'bg-green-500/20 text-green-400' : ordre.status === 'bloque' ? 'bg-red-500/20 text-red-400' : 'bg-blue-500/20 text-blue-400'}`}>{ordre.status || 'en_cours'}</span>
+                                                {ordre.isExtra && <span className="font-bold" style={{color: '#ffc800'}}>${ordre.montantExtra}</span>}
+                                                <span className="text-gray-500">{isExpanded ? Icons.chevronUp : Icons.chevronDown}</span>
+                                            </div>
                                         </div>
-                                        <div className="flex items-center gap-3">
-                                            <span className={`px-2 py-1 rounded text-xs ${ordre.status === 'complete' ? 'bg-green-500/20 text-green-400' : ordre.status === 'bloque' ? 'bg-red-500/20 text-red-400' : 'bg-blue-500/20 text-blue-400'}`}>{ordre.status || 'en_cours'}</span>
-                                            {ordre.isExtra && <span className="font-bold" style={{color: '#ffc800'}}>${ordre.montantExtra}</span>}
-                                        </div>
+                                        {isExpanded && (
+                                            <div className="ordre-expanded">
+                                                <div className="grid grid-cols-2 gap-4 text-sm">
+                                                    <div>
+                                                        <span className="text-gray-500">Projet:</span>
+                                                        <span className="ml-2 text-white">{projet?.nom || 'N/A'}</span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-gray-500">Date:</span>
+                                                        <span className="ml-2 text-white">{formatDate(ordre.rapport.date)}</span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-gray-500">Redacteur:</span>
+                                                        <span className="ml-2 text-white">{ordre.rapport.redacteur}</span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-gray-500">Status:</span>
+                                                        <span className="ml-2 text-white">{ordre.status || 'en_cours'}</span>
+                                                    </div>
+                                                </div>
+                                                {ordre.isExtra && (
+                                                    <div className="mt-3 p-2 rounded bg-yellow-500/10 border border-yellow-500/30">
+                                                        <span className="text-yellow-400 text-sm font-medium">💰 Extra: ${ordre.montantExtra}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     )}
                 </div>
             );
         };
         
+        // FIX: ReunionsView - properly parse and display reunions
         const ReunionsView = ({ rapports, selectedDate }) => {
-            const reunions = rapports.filter(r => r.date === selectedDate && r.reunions && typeof r.reunions === 'string' && r.reunions.trim()).map(r => ({ texte: r.reunions, redacteur: r.redacteur, projet: PROJETS.find(p => p.id === r.projet)?.nom }));
+            const reunions = rapports
+                .filter(r => r.date === selectedDate)
+                .flatMap(r => {
+                    const parsed = parseReunions(r.reunions);
+                    const projet = PROJETS.find(p => p.id === r.projet)?.nom;
+                    return parsed.map((reunion, idx) => ({
+                        ...reunion,
+                        redacteur: r.redacteur,
+                        projet: projet,
+                        key: `${r.id}-${idx}`
+                    }));
+                });
+            
             return (
                 <div className="animate-fade">
                     <div className="section-title">REUNIONS ({reunions.length})</div>
@@ -474,13 +615,25 @@
                         <div className="text-center py-16 text-gray-500"><div className="text-4xl mb-4">👥</div>Aucune reunion enregistree</div>
                     ) : (
                         <div className="space-y-4">
-                            {reunions.map((r, i) => (
-                                <div key={i} className="report-card p-4">
+                            {reunions.map((r) => (
+                                <div key={r.key} className="report-card p-4">
                                     <div className="flex items-center gap-2 mb-2">
                                         <span className="text-sm font-medium">{r.redacteur}</span>
                                         <span className="text-xs text-gray-500">- {r.projet}</span>
+                                        {r.type && (
+                                            <span className="text-xs px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-400 ml-2">
+                                                {r.type}
+                                            </span>
+                                        )}
                                     </div>
-                                    <div className="text-gray-300 whitespace-pre-wrap">{r.texte}</div>
+                                    {r.participants && (
+                                        <div className="text-xs text-gray-400 mb-2">
+                                            <span className="text-gray-500">Participants:</span> {r.participants}
+                                        </div>
+                                    )}
+                                    {r.notes && (
+                                        <div className="text-gray-300 whitespace-pre-wrap">{r.notes}</div>
+                                    )}
                                 </div>
                             ))}
                         </div>
@@ -489,6 +642,7 @@
             );
         };
         
+        // FIX: PhotosView - handle missing images gracefully
         const PhotosView = ({ rapports, selectedDate }) => {
             const allPhotos = rapports.filter(r => r.date === selectedDate).flatMap(r => {
                 const photos = [];
@@ -498,6 +652,7 @@
                 (r.photosProblemes || []).forEach(p => photos.push({ ...(typeof p === 'object' ? p : {data: p}), type: 'Probleme', redacteur: r.redacteur }));
                 return photos;
             });
+            
             return (
                 <div className="animate-fade">
                     <div className="section-title">PHOTOS ({allPhotos.length})</div>
@@ -507,10 +662,29 @@
                         <div className="photo-grid grid grid-cols-4 md:grid-cols-6 gap-4">
                             {allPhotos.map((photo, i) => (
                                 <div key={i} className="relative group">
-                                    <img src={photo.data} alt="" className="w-full aspect-square object-cover rounded-lg cursor-pointer" />
+                                    {photo.data ? (
+                                        <img 
+                                            src={photo.data} 
+                                            alt="" 
+                                            className="w-full aspect-square object-cover rounded-lg cursor-pointer"
+                                            onError={(e) => {
+                                                e.target.style.display = 'none';
+                                                e.target.nextSibling.style.display = 'flex';
+                                            }}
+                                        />
+                                    ) : null}
+                                    <div className={`photo-placeholder ${photo.data ? 'hidden' : ''}`}>
+                                        {Icons.image}
+                                        <span className="text-xs mt-1">{photo.type}</span>
+                                    </div>
                                     <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex flex-col items-center justify-center text-xs">
                                         <span className="text-white">{photo.redacteur}</span>
                                         <span className={`px-2 py-0.5 rounded mt-1 ${photo.type === 'Probleme' ? 'bg-red-500' : 'bg-purple-500'}`}>{photo.type}</span>
+                                        {photo.geolocation?.latitude && (
+                                            <span className="flex items-center gap-1 mt-1 text-green-400">
+                                                {Icons.mapPin} GPS
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
                             ))}
@@ -558,6 +732,7 @@
             const [activeTab, setActiveTab] = useState('dashboard');
             const [rapports, setRapports] = useState([]);
             const [selectedDate, setSelectedDate] = useState(getTodayStr());
+            const [filterProjet, setFilterProjet] = useState(null);
             
             const loadRapports = async () => {
                 try {
@@ -597,6 +772,13 @@
                 return () => clearInterval(interval);
             }, []);
             
+            // Clear filter when changing tabs
+            useEffect(() => {
+                if (activeTab !== 'rapports') {
+                    setFilterProjet(null);
+                }
+            }, [activeTab]);
+            
             const markFacture = async (rapportId) => {
                 const { error } = await supabase.from('rapports').update({ extras_factures: true }).eq('id', rapportId);
                 if (error) { console.error('Supabase error:', error); return; }
@@ -605,13 +787,13 @@
             
             const renderContent = () => {
                 switch(activeTab) {
-                    case 'dashboard': return <DashboardView rapports={rapports} selectedDate={selectedDate} />;
-                    case 'rapports': return <RapportsView rapports={rapports} selectedDate={selectedDate} />;
+                    case 'dashboard': return <DashboardView rapports={rapports} selectedDate={selectedDate} setActiveTab={setActiveTab} setFilterProjet={setFilterProjet} />;
+                    case 'rapports': return <RapportsView rapports={rapports} selectedDate={selectedDate} filterProjet={filterProjet} setFilterProjet={setFilterProjet} />;
                     case 'ordres': return <OrdresView rapports={rapports} selectedDate={selectedDate} />;
                     case 'reunions': return <ReunionsView rapports={rapports} selectedDate={selectedDate} />;
                     case 'photos': return <PhotosView rapports={rapports} selectedDate={selectedDate} />;
                     case 'extras': return <ExtrasView rapports={rapports} onMarkFacture={markFacture} />;
-                    default: return <DashboardView rapports={rapports} selectedDate={selectedDate} />;
+                    default: return <DashboardView rapports={rapports} selectedDate={selectedDate} setActiveTab={setActiveTab} setFilterProjet={setFilterProjet} />;
                 }
             };
             

@@ -1,30 +1,39 @@
-# DR Électrique - Plateforme Rapports Journaliers
+# DR Électrique - Rapport Journalier
 
-## 🔗 URLs
-- **Formulaire Employés**: https://dr-electrique-rapport.netlify.app
-- **Dashboard Admin**: https://dr-electrique-rapport.netlify.app/dashboard.html
+Système de rapports journaliers pour chantiers électriques.
 
-## 🛠 Stack
-- Frontend: React 18 + Tailwind CSS
-- Backend: Supabase (PostgreSQL)
-- Style: Matrix Purple Glow
-- Hébergement: Netlify
+## URLs Netlify
 
-## 📱 Fonctionnalités Formulaire
-- TimePicker avec flèches ▲▼
-- Scanner IA matériaux
-- Photos avec GPS
-- Transcription vocale réunions
-- Auto-fill adresse projet
+| Type | URL |
+|------|-----|
+| **Employés** | `https://dr-electrique-rapport.netlify.app` |
+| **Admin** | `https://dr-electrique-rapport.netlify.app/dashboard-a2c15af64b97e73f.html` |
 
-## 📊 Dashboard Admin
-- Rapports manquants
-- Stats par projet
-- Gestion des extras à facturer
-- Vue photos avec GPS
+## Features
 
-## 👷 Entreprise
-**Groupe DR Électrique Inc.**
-- L'Alliance Industrielle
-- SIP Électrique
-- BR Construction
+### Formulaire Employés (`index.html`)
+- Time picker heures début/fin avec flèches
+- **Claude Vision AI** pour scanner matériaux
+- Photos avec géolocalisation GPS automatique
+- Ordres de travail avec flag EXTRA
+- Sync Supabase
+
+### Dashboard Admin (secret URL)
+- **Realtime updates** via Supabase subscription
+- Rapports manquants par contremaître
+- Extras non facturés
+- Vue par projet
+- Galerie photos
+
+## Stack
+- React 18 + Tailwind CSS
+- Supabase (PostgreSQL + Realtime)
+- Claude Vision API (material detection)
+- Netlify (hosting)
+
+## Supabase Config
+- Project: `iawsshgkogntmdzrfjyw`
+- Tables: `rapports`, `photos`
+
+---
+*L'Alliance Industrielle - Groupe DR Électrique Inc.*

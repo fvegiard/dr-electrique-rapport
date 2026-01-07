@@ -463,28 +463,64 @@
                 const reader = new FileReader();
                 reader.onload = async (ev) => {
                     const imageData = ev.target.result;
+                    const base64Data = imageData.split(',')[1];
+                    const mediaType = file.type || 'image/jpeg';
                     
-                    // Simulate Claude Vision analysis (in production, call Anthropic API)
-                    // For demo, we'll use pattern matching on common materials
-                    await new Promise(r => setTimeout(r, 1500)); // Simulate API delay
+                    try {
+                        // Real Claude Vision API call
+                        const response = await fetch("https://api.anthropic.com/v1/messages", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                model: "claude-sonnet-4-20250514",
+                                max_tokens: 500,
+                                messages: [{
+                                    role: "user",
+                                    content: [
+                                        {
+                                            type: "image",
+                                            source: { type: "base64", media_type: mediaType, data: base64Data }
+                                        },
+                                        {
+                                            type: "text",
+                                            text: `Analyse cette photo de matériel électrique. Identifie le matériel et estime la quantité visible.
+                                            
+Réponds UNIQUEMENT en JSON valide, sans markdown:
+{"item": "nom du matériel électrique", "quantite": "nombre estimé", "unite": "unité|pi|m|rouleau|boîte", "confidence": 0.85}
+
+Matériaux connus: ${MATERIAUX_COMMUNS.slice(0, 15).join(', ')}
+
+Si tu ne reconnais pas de matériel électrique, réponds: {"item": "Non identifié", "quantite": "1", "unite": "unité", "confidence": 0.0}`
+                                        }
+                                    ]
+                                }]
+                            })
+                        });
+                        
+                        const data = await response.json();
+                        const text = data.content?.[0]?.text || '{}';
+                        const cleanJson = text.replace(/```json|```/g, '').trim();
+                        const detected = JSON.parse(cleanJson);
+                        detected.image = imageData;
+                        
+                        setDetectedMaterial(detected);
+                        setEditedItem(detected.item);
+                        setEditedQty(detected.quantite);
+                    } catch (err) {
+                        console.error('Claude API error:', err);
+                        // Fallback to manual entry
+                        setDetectedMaterial({
+                            item: "Erreur détection",
+                            quantite: "1",
+                            unite: "unité",
+                            confidence: 0,
+                            image: imageData,
+                            error: true
+                        });
+                        setEditedItem('');
+                        setEditedQty('1');
+                    }
                     
-                    // Mock detection based on random selection for demo
-                    const mockDetections = [
-                        { item: "Câble NMD 14/2", quantite: "2", unite: "rouleau", confidence: 0.92 },
-                        { item: "Conduit EMT 3/4\"", quantite: "10", unite: "pi", confidence: 0.88 },
-                        { item: "Boîte 4x4", quantite: "5", unite: "unité", confidence: 0.95 },
-                        { item: "Disjoncteur 20A", quantite: "3", unite: "unité", confidence: 0.90 },
-                        { item: "Fil THHN #12", quantite: "1", unite: "rouleau", confidence: 0.85 },
-                        { item: "Prise GFCI", quantite: "2", unite: "unité", confidence: 0.93 },
-                        { item: "Luminaire LED 2x4", quantite: "4", unite: "unité", confidence: 0.87 },
-                    ];
-                    
-                    const detected = mockDetections[Math.floor(Math.random() * mockDetections.length)];
-                    detected.image = imageData;
-                    
-                    setDetectedMaterial(detected);
-                    setEditedItem(detected.item);
-                    setEditedQty(detected.quantite);
                     setIsAnalyzing(false);
                 };
                 reader.readAsDataURL(file);

@@ -500,7 +500,19 @@ Si tu ne reconnais pas de matériel électrique, réponds: {"item": "Non identif
                         const data = await response.json();
                         const text = data.content?.[0]?.text || '{}';
                         const cleanJson = text.replace(/```json|```/g, '').trim();
-                        const detected = JSON.parse(cleanJson);
+                        let detected;
+                        try {
+                            detected = JSON.parse(cleanJson);
+                        } catch (parseError) {
+                            console.error('JSON parse error:', parseError);
+                            detected = {
+                                item: "Erreur de parsing",
+                                quantite: "1",
+                                unite: "unité",
+                                confidence: 0,
+                                error: true
+                            };
+                        }
                         detected.image = imageData;
                         
                         setDetectedMaterial(detected);
@@ -816,9 +828,14 @@ Si tu ne reconnais pas de matériel électrique, réponds: {"item": "Non identif
                     return acc + calculateHours(m.heureDebut, m.heureFin);
                 }, 0);
                 
+                // Trouver le nom du projet
+                const projetInfo = PROJETS.find(p => p.id === data.projet);
+                const projetNom = projetInfo ? projetInfo.nom : '';
+
                 const rapport = {
                     ...data,
                     id: generateId(),
+                    projetNom: projetNom,
                     submittedAt: new Date().toISOString(),
                     totalHeuresMO,
                     totalPhotos: data.photosGenerales.length + data.photosAvant.length + data.photosApres.length + data.photosProblemes.length,
@@ -1210,16 +1227,70 @@ Si tu ne reconnais pas de matériel électrique, réponds: {"item": "Non identif
                     
                     {/* RÉUNIONS */}
                     <Section icon={Icons.meeting} title="RÉUNIONS" subtitle="Rencontres de chantier" color="#6366f1">
-                        <DynamicRows
-                            rows={data.reunions}
-                            setRows={(rows) => update('reunions', rows)}
-                            fields={[
-                                { key: 'type', placeholder: 'Type', type: 'select', options: ['Coordination', 'Sécurité', 'Client', 'Ingénieur', 'Autre'], width: '100px' },
-                                { key: 'participants', placeholder: 'Participants', width: '1fr' },
-                            ]}
-                            addLabel="Ajouter réunion"
-                            color="#6366f1"
-                        />
+                        <div className="space-y-4">
+                            {data.reunions.map((reunion, idx) => (
+                                <div key={reunion.id} className="bg-black/30 rounded-xl p-3 space-y-3 border border-white/5">
+                                    <div className="flex gap-2">
+                                        <select
+                                            value={reunion.type}
+                                            onChange={(e) => {
+                                                const updated = [...data.reunions];
+                                                updated[idx].type = e.target.value;
+                                                update('reunions', updated);
+                                            }}
+                                            className="w-32 px-3 py-3 rounded-xl"
+                                        >
+                                            <option value="">Type</option>
+                                            <option value="Coordination">Coordination</option>
+                                            <option value="Sécurité">Sécurité</option>
+                                            <option value="Client">Client</option>
+                                            <option value="Ingénieur">Ingénieur</option>
+                                            <option value="Autre">Autre</option>
+                                        </select>
+                                        <input
+                                            type="text"
+                                            value={reunion.participants}
+                                            onChange={(e) => {
+                                                const updated = [...data.reunions];
+                                                updated[idx].participants = e.target.value;
+                                                update('reunions', updated);
+                                            }}
+                                            placeholder="Participants"
+                                            className="flex-1 px-3 py-3 rounded-xl"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                if (data.reunions.length > 1) {
+                                                    update('reunions', data.reunions.filter(r => r.id !== reunion.id));
+                                                }
+                                            }}
+                                            className="p-3 text-gray-600 hover:text-red-500"
+                                        >
+                                            {Icons.trash}
+                                        </button>
+                                    </div>
+                                    <textarea
+                                        value={reunion.notes || ''}
+                                        onChange={(e) => {
+                                            const updated = [...data.reunions];
+                                            updated[idx].notes = e.target.value;
+                                            update('reunions', updated);
+                                        }}
+                                        placeholder="Notes de la réunion..."
+                                        rows={2}
+                                        className="w-full px-3 py-2 rounded-xl resize-none text-sm"
+                                    />
+                                </div>
+                            ))}
+                            <button
+                                type="button"
+                                onClick={() => update('reunions', [...data.reunions, { id: generateId(), type: '', participants: '', notes: '' }])}
+                                className="w-full py-3 border-2 border-dashed border-indigo-500/40 rounded-xl text-indigo-400 flex items-center justify-center gap-2 text-sm font-medium"
+                            >
+                                {Icons.plus} Ajouter réunion
+                            </button>
+                        </div>
                     </Section>
                     
                     {/* PHOTOS AVEC GPS */}

@@ -467,33 +467,14 @@
                     const mediaType = file.type || 'image/jpeg';
                     
                     try {
-                        // Real Claude Vision API call
-                        const response = await fetch("https://api.anthropic.com/v1/messages", {
+                        // Claude Vision API via Netlify Function (sécurisé)
+                        const response = await fetch("/.netlify/functions/claude-vision", {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({
-                                model: "claude-sonnet-4-20250514",
-                                max_tokens: 500,
-                                messages: [{
-                                    role: "user",
-                                    content: [
-                                        {
-                                            type: "image",
-                                            source: { type: "base64", media_type: mediaType, data: base64Data }
-                                        },
-                                        {
-                                            type: "text",
-                                            text: `Analyse cette photo de matériel électrique. Identifie le matériel et estime la quantité visible.
-                                            
-Réponds UNIQUEMENT en JSON valide, sans markdown:
-{"item": "nom du matériel électrique", "quantite": "nombre estimé", "unite": "unité|pi|m|rouleau|boîte", "confidence": 0.85}
-
-Matériaux connus: ${MATERIAUX_COMMUNS.slice(0, 15).join(', ')}
-
-Si tu ne reconnais pas de matériel électrique, réponds: {"item": "Non identifié", "quantite": "1", "unite": "unité", "confidence": 0.0}`
-                                        }
-                                    ]
-                                }]
+                                imageData: base64Data,
+                                mediaType: mediaType,
+                                materiaux: MATERIAUX_COMMUNS.slice(0, 15).join(', ')
                             })
                         });
                         

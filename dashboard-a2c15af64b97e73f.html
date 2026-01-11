@@ -753,10 +753,10 @@
                         const rapport = snakeToCamel(r);
                         // Attacher les photos au rapport
                         const rapportPhotos = (photosData || []).filter(p => p.rapport_id === r.id);
-                        rapport.photosGenerales = rapportPhotos.filter(p => p.category === 'GENERAL').map(p => ({data: p.url, geolocation: {latitude: p.latitude, longitude: p.longitude}}));
+                        rapport.photosGenerales = rapportPhotos.filter(p => p.category === 'GENERALES').map(p => ({data: p.url, geolocation: {latitude: p.latitude, longitude: p.longitude}}));
                         rapport.photosAvant = rapportPhotos.filter(p => p.category === 'AVANT').map(p => ({data: p.url, geolocation: {latitude: p.latitude, longitude: p.longitude}}));
                         rapport.photosApres = rapportPhotos.filter(p => p.category === 'APRES').map(p => ({data: p.url, geolocation: {latitude: p.latitude, longitude: p.longitude}}));
-                        rapport.photosProblemes = rapportPhotos.filter(p => p.category === 'PROBLEME').map(p => ({data: p.url, geolocation: {latitude: p.latitude, longitude: p.longitude}}));
+                        rapport.photosProblemes = rapportPhotos.filter(p => p.category === 'PROBLEMES').map(p => ({data: p.url, geolocation: {latitude: p.latitude, longitude: p.longitude}}));
                         return rapport;
                     });
                     setRapports(converted);

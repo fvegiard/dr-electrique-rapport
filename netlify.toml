@@ -10,13 +10,6 @@
   to = "/dashboard-a2c15af64b97e73f.html"
   status = 200
 
-# SPA fallback (catch-all for client-side routing)
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-  conditions = {Role = ["admin"]}
-
 [build]
   command = "echo 'Static files deployment'"
   publish = "."

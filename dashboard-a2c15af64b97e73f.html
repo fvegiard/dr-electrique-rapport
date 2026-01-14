@@ -338,11 +338,14 @@
         
         const DashboardView = ({ rapports, selectedDate, setActiveTab, setFilterProjet }) => {
             const todayRapports = rapports.filter(r => r.date === selectedDate);
+            console.log('📊 Today reports:', todayRapports.length, 'for date:', selectedDate);
+            console.log('Hours data:', todayRapports.map(r => ({ redacteur: r.redacteur, totalHeuresMo: r.totalHeuresMo })));
+            
             const contreMaitres = EMPLOYES.filter(e => e.role === "Contremaître");
             const submittedBy = todayRapports.map(r => r.redacteur);
             const missing = contreMaitres.filter(cm => !submittedBy.includes(cm.nom));
             
-            const totalHeures = todayRapports.reduce((acc, r) => acc + (r.totalHeuresMO || 0), 0);
+            const totalHeures = todayRapports.reduce((acc, r) => acc + (r.totalHeuresMo || 0), 0);
             const totalOrdres = todayRapports.reduce((acc, r) => acc + (r.ordresTravail?.length || 0), 0);
             
             // FIX: Count reunions properly using parseReunions
@@ -353,7 +356,7 @@
             
             const projetStats = PROJETS.map(p => {
                 const projRapports = todayRapports.filter(r => r.projet === p.id);
-                const heures = projRapports.reduce((acc, r) => acc + (r.totalHeuresMO || 0), 0);
+                const heures = projRapports.reduce((acc, r) => acc + (r.totalHeuresMo || 0), 0);
                 const ordres = projRapports.reduce((acc, r) => acc + (r.ordresTravail?.filter(o => o.isExtra)?.length || 0), 0);
                 return { ...p, rapports: projRapports.length, heures, ordres };
             });
@@ -731,7 +734,7 @@
         const App = () => {
             const [activeTab, setActiveTab] = useState('dashboard');
             const [rapports, setRapports] = useState([]);
-            const [selectedDate, setSelectedDate] = useState(getTodayStr());
+            const [selectedDate, setSelectedDate] = useState(getTodayStr()); // Show today's reports
             const [filterProjet, setFilterProjet] = useState(null);
             
             const loadRapports = async () => {
@@ -760,8 +763,10 @@
                         return rapport;
                     });
                     setRapports(converted);
+                    console.log('✅ Loaded', converted.length, 'reports from Supabase');
+                    console.log('Report dates:', converted.map(r => r.date));
                 } catch (err) {
-                    console.error('Erreur Supabase:', err);
+                    console.error('❌ Erreur Supabase:', err);
                     setRapports([]);
                 }
             };

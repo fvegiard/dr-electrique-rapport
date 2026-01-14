@@ -29,11 +29,43 @@ Système de rapports journaliers pour chantiers électriques.
 - React 18 + Tailwind CSS
 - Supabase (PostgreSQL + Realtime)
 - Claude Vision API (material detection)
-- Netlify (hosting)
+- Netlify (hosting + serverless functions)
+
+## Environment Variables (Netlify)
+
+Set these in Netlify Dashboard > Site Settings > Environment Variables:
+
+| Variable | Description |
+|----------|-------------|
+| `ANTHROPIC_API_KEY` | Your Anthropic API key for Claude Vision |
+
+## Local Development
+
+```bash
+# Install dependencies (optional, for Netlify CLI)
+npm install
+
+# Start local server
+npm run dev
+# or
+python -m http.server 8002
+```
+
+## Deployment
+
+```bash
+# Deploy to Netlify
+npm run deploy
+```
 
 ## Supabase Config
 - Project: `iawsshgkogntmdzrfjyw`
 - Tables: `rapports`, `photos`
+
+## Security Notes
+- API keys are stored in Netlify environment variables (not in code)
+- Dashboard URL is obfuscated for basic access control
+- All API calls go through Netlify serverless functions
 
 ---
 *L'Alliance Industrielle - Groupe DR Électrique Inc.*

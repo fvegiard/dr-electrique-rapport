@@ -363,6 +363,7 @@
                                 }}
                             >
                                 <option value={0}>00</option>
+                                <option value={14}>14</option>
                                 <option value={15}>15</option>
                                 <option value={30}>30</option>
                                 <option value={45}>45</option>
@@ -723,7 +724,7 @@ Si tu ne reconnais pas de matériel électrique, réponds: {"item": "Non identif
                                     ) : field.type === 'time-picker' ? (
                                         <TimePicker
                                             key={field.key}
-                                            value={row[field.key] || '07:00'}
+                                            value={row[field.key] || '06:14'}
                                             onChange={(val) => updateRow(row.id, field.key, val)}
                                             label={field.placeholder}
                                         />
@@ -764,14 +765,14 @@ Si tu ne reconnais pas de matériel électrique, réponds: {"item": "Non identif
         const RapportForm = () => {
             const [step, setStep] = useState('form');
             const [data, setData] = useState({
-                projet: '',
+                projet: 'PRJ-001',
                 date: getTodayStr(),
-                adresse: '',
+                adresse: '1500 Atwater, Montréal, QC H3Z 1X5',
                 meteo: '',
                 temperature: '',
-                redacteur: '',
+                redacteur: 'Maxime R.',
                 // Main d'oeuvre avec heures début/fin
-                mainOeuvre: [{ id: generateId(), employe: '', heureDebut: '07:00', heureFin: '15:30', description: '' }],
+                mainOeuvre: [{ id: generateId(), employe: '', heureDebut: '06:14', heureFin: '15:30', description: '' }],
                 materiaux: [{ id: generateId(), item: '', quantite: '', unite: 'unité', detectedByAI: false }],
                 equipements: [{ id: generateId(), nom: '', heures: '', description: '' }],
                 soustraitants: [{ id: generateId(), entreprise: '', nbPersonnes: '', heures: '', description: '' }],
@@ -852,13 +853,13 @@ Si tu ne reconnais pas de matériel électrique, réponds: {"item": "Non identif
             
             const resetForm = () => {
                 setData({
-                    projet: '',
+                    projet: 'PRJ-001',
                     date: getTodayStr(),
-                    adresse: '',
+                    adresse: '1500 Atwater, Montréal, QC H3Z 1X5',
                     meteo: '',
                     temperature: '',
                     redacteur: data.redacteur,
-                    mainOeuvre: [{ id: generateId(), employe: '', heureDebut: '07:00', heureFin: '15:30', description: '' }],
+                    mainOeuvre: [{ id: generateId(), employe: '', heureDebut: '06:14', heureFin: '15:30', description: '' }],
                     materiaux: [{ id: generateId(), item: '', quantite: '', unite: 'unité', detectedByAI: false }],
                     equipements: [{ id: generateId(), nom: '', heures: '', description: '' }],
                     soustraitants: [{ id: generateId(), entreprise: '', nbPersonnes: '', heures: '', description: '' }],
@@ -1075,7 +1076,7 @@ Si tu ne reconnais pas de matériel électrique, réponds: {"item": "Non identif
                             
                             <button 
                                 type="button"
-                                onClick={() => update('mainOeuvre', [...data.mainOeuvre, { id: generateId(), employe: '', heureDebut: '07:00', heureFin: '15:30', description: '' }])}
+                                onClick={() => update('mainOeuvre', [...data.mainOeuvre, { id: generateId(), employe: '', heureDebut: '06:14', heureFin: '15:30', description: '' }])}
                                 className="w-full py-3 border-2 border-dashed border-blue-500/40 rounded-xl text-blue-500 flex items-center justify-center gap-2 text-sm font-medium"
                             >
                                 {Icons.plus} Ajouter employé
@@ -1113,7 +1114,7 @@ Si tu ne reconnais pas de matériel électrique, réponds: {"item": "Non identif
                             rows={data.equipements}
                             setRows={(rows) => update('equipements', rows)}
                             fields={[
-                                { key: 'nom', placeholder: 'Équipement / #', width: '1fr' },
+                                { key: 'nom', placeholder: 'Équipement', type: 'datalist', options: ['Stanex', 'Perceur'], width: '1fr' },
                                 { key: 'heures', placeholder: 'Hrs', type: 'number', width: '65px' },
                             ]}
                             addLabel="Ajouter équipement"

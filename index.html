@@ -93,10 +93,11 @@
         }
         
         .time-display {
-            font-family: 'Bebas Neue', sans-serif;
-            font-size: 24px;
-            letter-spacing: 2px;
-            min-width: 80px;
+            font-family: 'Inter', sans-serif;
+            font-size: 22px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            min-width: 50px;
             text-align: center;
         }
         
@@ -334,7 +335,7 @@
                             >
                                 ▲
                             </button>
-                            <div className="time-display text-white bg-black/40 px-3 py-1 rounded-lg border border-white/10 text-xl min-w-[50px]">
+                            <div className="time-display text-white bg-black/40 px-2 py-1 rounded-lg border border-white/10 text-xl min-w-[44px]">
                                 {String(time.hours).padStart(2, '0')}
                             </div>
                             <button
@@ -354,7 +355,7 @@
                             <select
                                 value={time.minutes}
                                 onChange={(e) => handleMinutesChange(e.target.value)}
-                                className="time-display text-white bg-black/40 px-3 py-2 rounded-lg border border-white/10 text-xl min-w-[60px] text-center cursor-pointer"
+                                className="time-display text-white bg-black/40 px-2 py-2 rounded-lg border border-white/10 text-xl min-w-[52px] text-center cursor-pointer"
                                 style={{
                                     backgroundImage: 'none',
                                     paddingRight: '12px',

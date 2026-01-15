@@ -129,26 +129,20 @@
         // ============== CONFIG ==============
         
         const EMPLOYES = [
-            { id: 1, nom: "Carl Sylvestre", role: "Contremaître" },
-            { id: 2, nom: "Claude Desmarais", role: "Contremaître" },
-            { id: 3, nom: "Dany Deslauriers", role: "Contremaître" },
-            { id: 4, nom: "Mario Vaillancourt", role: "Contremaître" },
-            { id: 5, nom: "Martin Brossard", role: "Contremaître" },
-            { id: 6, nom: "Maxime Robert", role: "Contremaître" },
-            { id: 7, nom: "Jeremy Dubuc", role: "Contremaître" },
-            { id: 8, nom: "Marc-André Tremblay", role: "Contremaître" },
-            { id: 9, nom: "David Côté", role: "Contremaître" },
-            { id: 10, nom: "Alexandre Bouchard", role: "Contremaître" }
+            { id: 1, nom: "Maxime R.", role: "Ajouté" },
+            { id: 2, nom: "Martin B.", role: "Ajouté" },
+            { id: 3, nom: "Patrick R.", role: "Ajouté" },
+            { id: 4, nom: "Nathael", role: "Ajouté" },
+            { id: 5, nom: "Benjamin M.", role: "Ajouté" },
+            { id: 6, nom: "Jonathan F.", role: "Ajouté" },
+            { id: 7, nom: "Ahmad", role: "Ajouté" },
+            { id: 8, nom: "Vincent Tibeault", role: "Ajouté" }
         ];
         
         // Workers for main d'oeuvre (includes all staff)
         const WORKERS = [
-            "Carl Sylvestre", "Claude Desmarais", "Dany Deslauriers", 
-            "Mario Vaillancourt", "Martin Brossard", "Maxime Robert",
-            "Jeremy Dubuc", "Marc-André Tremblay", "David Côté", "Alexandre Bouchard",
-            "Jean-François Lavoie", "Patrick Gagnon", "Sébastien Roy",
-            "Mathieu Pelletier", "Simon Gauthier", "Éric Fortin", "François Morin",
-            "Michel Leblanc", "Pierre Gagnon", "Robert Tremblay"
+            "Maxime R.", "Martin B.", "Patrick R.", "Nathael",
+            "Benjamin M.", "Jonathan F.", "Ahmad", "Vincent Tibeault"
         ];
         
         const PROJETS = [
@@ -308,62 +302,74 @@
                 }
                 return { hours: 0, minutes: 0 };
             };
-            
+
             const time = parseTime(value);
-            
+
             const formatTime = (h, m) => {
                 return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
             };
-            
+
             const adjustHours = (delta) => {
                 let newHours = time.hours + delta;
                 if (newHours > 23) newHours = 0;
                 if (newHours < 0) newHours = 23;
                 onChange(formatTime(newHours, time.minutes));
             };
-            
-            const adjustMinutes = (delta) => {
-                let newMinutes = time.minutes + delta;
-                let newHours = time.hours;
-                if (newMinutes >= 60) {
-                    newMinutes = 0;
-                    newHours = (newHours + 1) % 24;
-                }
-                if (newMinutes < 0) {
-                    newMinutes = 45;
-                    newHours = newHours === 0 ? 23 : newHours - 1;
-                }
-                // Snap to 15-minute intervals
-                newMinutes = Math.round(newMinutes / 15) * 15;
-                if (newMinutes === 60) newMinutes = 0;
-                onChange(formatTime(newHours, newMinutes));
+
+            const handleMinutesChange = (newMinutes) => {
+                onChange(formatTime(time.hours, parseInt(newMinutes)));
             };
-            
+
             return (
                 <div className="flex flex-col gap-1">
                     {label && <label className="text-[10px] text-gray-500 font-medium">{label}</label>}
                     <div className="flex items-center gap-2">
-                        <button 
-                            type="button"
-                            onClick={() => adjustHours(-1)}
-                            className="time-picker-btn"
-                            title="Heures -1"
-                        >
-                            {Icons.chevronLeft}
-                        </button>
-                        <div className="time-display text-white bg-black/40 px-3 py-2 rounded-xl border border-white/10">
-                            {formatTime(time.hours, time.minutes)}
+                        {/* Hours section with UP/DOWN arrows */}
+                        <div className="flex flex-col items-center">
+                            <button
+                                type="button"
+                                onClick={() => adjustHours(1)}
+                                className="time-picker-btn w-10 h-8 text-lg"
+                                title="Heures +1"
+                            >
+                                ▲
+                            </button>
+                            <div className="time-display text-white bg-black/40 px-3 py-1 rounded-lg border border-white/10 text-xl min-w-[50px]">
+                                {String(time.hours).padStart(2, '0')}
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => adjustHours(-1)}
+                                className="time-picker-btn w-10 h-8 text-lg"
+                                title="Heures -1"
+                            >
+                                ▼
+                            </button>
                         </div>
-                        <button 
-                            type="button"
-                            onClick={() => adjustMinutes(15)}
-                            className="time-picker-btn"
-                            title="Minutes +15"
-                        >
-                            {Icons.chevronRight}
-                        </button>
+
+                        <span className="text-white text-2xl font-bebas">:</span>
+
+                        {/* Minutes section with dropdown */}
+                        <div className="flex flex-col items-center">
+                            <select
+                                value={time.minutes}
+                                onChange={(e) => handleMinutesChange(e.target.value)}
+                                className="time-display text-white bg-black/40 px-3 py-2 rounded-lg border border-white/10 text-xl min-w-[60px] text-center cursor-pointer"
+                                style={{
+                                    backgroundImage: 'none',
+                                    paddingRight: '12px',
+                                    appearance: 'none',
+                                    WebkitAppearance: 'none'
+                                }}
+                            >
+                                <option value={0}>00</option>
+                                <option value={15}>15</option>
+                                <option value={30}>30</option>
+                                <option value={45}>45</option>
+                            </select>
+                        </div>
                     </div>
-                    <p className="text-[9px] text-gray-600">← Heures | Minutes →</p>
+                    <p className="text-[9px] text-gray-600">▲▼ Heures | Minutes ▼</p>
                 </div>
             );
         };

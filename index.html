@@ -9,6 +9,7 @@
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <meta name="theme-color" content="#E63946">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -127,6 +128,17 @@
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlhd3NzaGdrb2dudG1kenJmanl3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc2NDkwMDUsImV4cCI6MjA4MzIyNTAwNX0.1BxhI5SWLL5786qsshidOMpTsOrGeNob6xpcKQjI4s4';
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         
+        // ============== EMAILJS CONFIG ==============
+        const EMAILJS_SERVICE_ID = 'service_drelectrique';  // A configurer sur emailjs.com
+        const EMAILJS_TEMPLATE_ID = 'template_rapport';     // A configurer sur emailjs.com
+        const EMAILJS_PUBLIC_KEY = 'YOUR_PUBLIC_KEY';       // A configurer sur emailjs.com
+        const EMAIL_BACKUP_TO = 'fvegiard@dreelectrique.com';
+        
+        // Init EmailJS
+        if (window.emailjs && EMAILJS_PUBLIC_KEY !== 'YOUR_PUBLIC_KEY') {
+            window.emailjs.init(EMAILJS_PUBLIC_KEY);
+        }
+        
         // ============== CONFIG ==============
         
         const EMPLOYES = [
@@ -177,8 +189,51 @@
             localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(pending));
         };
         
+        // ============== EMAIL BACKUP ==============
+        const sendEmailBackup = async (rapport) => {
+            if (!window.emailjs || EMAILJS_PUBLIC_KEY === 'YOUR_PUBLIC_KEY') {
+                console.log('EmailJS non configure - email non envoye');
+                return { success: false, reason: 'not_configured' };
+            }
+            
+            const formatMainOeuvre = (mo) => {
+                if (!mo || mo.length === 0) return 'Aucun';
+                return mo.map(e => `${e.nom}: ${e.debut}-${e.fin} (${e.description || 'N/A'})`).join('\n');
+            };
+            
+            const formatMateriaux = (mat) => {
+                if (!mat || mat.length === 0) return 'Aucun';
+                return mat.map(m => `- ${m.description} (Qte: ${m.quantite || 1})`).join('\n');
+            };
+            
+            const templateParams = {
+                to_email: EMAIL_BACKUP_TO,
+                date: rapport.date,
+                redacteur: rapport.redacteur,
+                projet: rapport.projetNom || rapport.projet,
+                adresse: rapport.adresse,
+                meteo: rapport.meteo,
+                temperature: rapport.temperature,
+                main_oeuvre: formatMainOeuvre(rapport.mainOeuvre),
+                materiaux: formatMateriaux(rapport.materiaux),
+                equipements: (rapport.equipements || []).join(', ') || 'Aucun',
+                notes: rapport.notesGenerales || 'Aucune',
+                total_heures: rapport.totalHeuresMO || 0,
+                timestamp: new Date().toLocaleString('fr-CA')
+            };
+            
+            try {
+                const response = await window.emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams);
+                console.log('Email backup envoye:', response.status);
+                return { success: true };
+            } catch (err) {
+                console.error('Email backup echoue:', err);
+                return { success: false, error: err };
+            }
+        };
+        
         const submitRapport = async (rapport) => {
-            // Soumettre à Supabase
+            // Soumettre à Supabase ET envoyer email en parallèle
             const supabaseData = {
                 date: rapport.date,
                 redacteur: rapport.redacteur,
@@ -200,9 +255,24 @@
                 total_extras: rapport.totalExtras
             };
             
-            const { data, error } = await supabase.from('rapports').insert([supabaseData]).select();
+            // Lancer les deux en parallèle
+            const [supabaseResult, emailResult] = await Promise.allSettled([
+                supabase.from('rapports').insert([supabaseData]).select(),
+                sendEmailBackup(rapport)
+            ]);
             
-            if (error) {
+            // Log email result
+            if (emailResult.status === 'fulfilled' && emailResult.value.success) {
+                console.log('Email backup envoye avec succes');
+            }
+            
+            // Gérer résultat Supabase
+            // Fix: empty object {} is truthy but not an actual error
+            const hasSupabaseError = supabaseResult.status === 'rejected' ||
+                (supabaseResult.value.error && Object.keys(supabaseResult.value.error).length > 0);
+
+            if (hasSupabaseError) {
+                const error = supabaseResult.status === 'rejected' ? supabaseResult.reason : supabaseResult.value.error;
                 console.error('Erreur Supabase:', error);
                 // Fallback localStorage si offline
                 const pending = JSON.parse(localStorage.getItem('dr_rapports_pending') || '[]');
@@ -211,7 +281,7 @@
                 throw new Error('Erreur de connexion - rapport sauvegardé localement');
             }
             
-            return data[0];
+            return supabaseResult.value.data[0];
         };
         
         // Géolocalisation

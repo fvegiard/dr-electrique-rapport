@@ -499,13 +499,13 @@
                                         {Icons.location} GPS
                                     </div>
                                 )}
-                                <button
+                                <button type="button"
                                     onClick={() => setPhotos(prev => prev.filter(p => p.id !== photo.id))}
                                     className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg"
                                 >×</button>
                             </div>
                         ))}
-                        <button
+                        <button type="button"
                             onClick={() => inputRef.current?.click()}
                             className="aspect-square border-2 border-dashed rounded-xl flex flex-col items-center justify-center transition-all active:scale-95"
                             style={{ borderColor: `${accent}50`, color: accent }}

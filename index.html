@@ -578,7 +578,7 @@
             return (
                 <div className="space-y-2">
                     <div className="photo-grid">
-                        {photos.map(photo => (
+                        {(Array.isArray(photos) ? photos : []).map(photo => (
                             <div key={photo.id} className="relative group">
                                 <img src={photo.data} className="photo-item w-full border border-white/10" alt="" />
                                 {photo.geolocation?.enabled && (

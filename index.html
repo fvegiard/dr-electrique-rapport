@@ -232,8 +232,69 @@
             }
         };
         
+        // ============== DEBUG & TEST SUPABASE ==============
+        const testSupabaseConnection = async () => {
+            console.log('TEST SUPABASE - Debut...');
+            const results = [];
+            
+            try {
+                // Test 1: SELECT
+                console.log('Test SELECT...');
+                const { data: selectData, error: selectError } = await supabase.from('rapports').select('id, redacteur').limit(3);
+                if (selectError) {
+                    results.push('SELECT FAIL: ' + selectError.message);
+                    console.error('SELECT error:', selectError);
+                } else {
+                    results.push('SELECT OK - ' + (selectData?.length || 0) + ' rapports');
+                    console.log('SELECT data:', selectData);
+                }
+                
+                // Test 2: INSERT test row
+                console.log('Test INSERT...');
+                const testData = {
+                    date: new Date().toISOString().split('T')[0],
+                    redacteur: '__TEST_CONNECTION__',
+                    projet: 'TEST',
+                    adresse: 'Test address',
+                    meteo: 'test',
+                    temperature: 0
+                };
+                const { data: insertData, error: insertError } = await supabase.from('rapports').insert([testData]).select();
+                if (insertError) {
+                    results.push('INSERT FAIL: ' + insertError.message + ' (code: ' + insertError.code + ')');
+                    console.error('INSERT error:', insertError);
+                } else {
+                    results.push('INSERT OK - ID: ' + insertData[0]?.id);
+                    console.log('INSERT data:', insertData);
+                    
+                    // Test 3: DELETE test row
+                    console.log('Test DELETE...');
+                    const { error: deleteError } = await supabase.from('rapports').delete().eq('redacteur', '__TEST_CONNECTION__');
+                    if (deleteError) {
+                        results.push('DELETE WARN: ' + deleteError.message);
+                    } else {
+                        results.push('DELETE OK');
+                    }
+                }
+            } catch (err) {
+                results.push('EXCEPTION: ' + err.message);
+                console.error('Test exception:', err);
+            }
+            
+            const summary = results.join('\n');
+            console.log('TEST SUPABASE - Resultats:\n' + summary);
+            alert('TEST SUPABASE:\n\n' + summary);
+            return results;
+        };
+        
+        // Expose for console debugging
+        window.testSupabase = testSupabaseConnection;
+        window.supabaseClient = supabase;
+        
         const submitRapport = async (rapport) => {
-            // Soumettre à Supabase ET envoyer email en parallèle
+            console.log('SUBMIT START - Rapport:', rapport.redacteur, rapport.date);
+            
+            // Prepare data for Supabase (snake_case)
             const supabaseData = {
                 date: rapport.date,
                 redacteur: rapport.redacteur,
@@ -241,47 +302,52 @@
                 projet_nom: rapport.projetNom,
                 adresse: rapport.adresse,
                 meteo: rapport.meteo,
-                temperature: rapport.temperature,
-                main_oeuvre: rapport.mainOeuvre,
-                materiaux: rapport.materiaux,
-                equipements: rapport.equipements,
-                ordres_travail: rapport.ordresTravail,
-                            reunions: JSON.stringify(rapport.reunions),
-                notes_generales: rapport.notesGenerales,
-                problemes_securite: rapport.problemesSecurite,
-                total_heures_mo: rapport.totalHeuresMO,
-                total_photos: rapport.totalPhotos,
-                has_extras: rapport.hasExtras,
-                total_extras: rapport.totalExtras
+                temperature: rapport.temperature ? parseInt(rapport.temperature) : null,
+                main_oeuvre: rapport.mainOeuvre || [],
+                materiaux: rapport.materiaux || [],
+                equipements: rapport.equipements || [],
+                ordres_travail: rapport.ordresTravail || [],
+                reunions: rapport.reunions || [],
+                notes_generales: rapport.notesGenerales || '',
+                problemes_securite: rapport.problemesSecurite || '',
+                total_heures_mo: rapport.totalHeuresMO || 0,
+                total_photos: rapport.totalPhotos || 0,
+                has_extras: rapport.hasExtras || false,
+                total_extras: rapport.totalExtras || 0
             };
             
-            // Lancer les deux en parallèle
-            const [supabaseResult, emailResult] = await Promise.allSettled([
-                supabase.from('rapports').insert([supabaseData]).select(),
-                sendEmailBackup(rapport)
-            ]);
+            console.log('Data prepared:', JSON.stringify(supabaseData).substring(0, 200) + '...');
             
-            // Log email result
-            if (emailResult.status === 'fulfilled' && emailResult.value.success) {
-                console.log('Email backup envoye avec succes');
-            }
+            // Submit to Supabase
+            console.log('Sending to Supabase...');
+            const { data, error } = await supabase.from('rapports').insert([supabaseData]).select();
             
-            // Gérer résultat Supabase
-            // Fix: empty object {} is truthy but not an actual error
-            const hasSupabaseError = supabaseResult.status === 'rejected' ||
-                (supabaseResult.value.error && Object.keys(supabaseResult.value.error).length > 0);
-
-            if (hasSupabaseError) {
-                const error = supabaseResult.status === 'rejected' ? supabaseResult.reason : supabaseResult.value.error;
-                console.error('Erreur Supabase:', error);
-                // Fallback localStorage si offline
+            console.log('Supabase response - data:', data, 'error:', error);
+            
+            // Check for real errors (not empty objects)
+            if (error && error.message) {
+                console.error('SUPABASE ERROR:', error.message, error.code, error.details);
+                
+                // Save to localStorage as backup
                 const pending = JSON.parse(localStorage.getItem('dr_rapports_pending') || '[]');
-                pending.push(rapport);
+                pending.push({ ...rapport, failedAt: new Date().toISOString(), errorMsg: error.message });
                 localStorage.setItem('dr_rapports_pending', JSON.stringify(pending));
-                throw new Error('Erreur de connexion - rapport sauvegardé localement');
+                console.log('Saved to localStorage as backup');
+                
+                throw new Error('Erreur Supabase: ' + error.message);
             }
             
-            return supabaseResult.value.data[0];
+            if (!data || data.length === 0) {
+                console.error('NO DATA RETURNED - Insert may have failed silently');
+                throw new Error('Aucune donnee retournee - verifiez les permissions RLS');
+            }
+            
+            console.log('SUCCESS! Rapport saved with ID:', data[0].id);
+            
+            // Email backup (non-blocking)
+            sendEmailBackup(rapport).catch(e => console.warn('Email backup failed:', e));
+            
+            return data[0];
         };
         
         // Géolocalisation
@@ -336,18 +402,39 @@
         
         // ============== COMPONENTS ==============
         
-        // Header
-        const Header = () => (
-            <header className="glass sticky top-0 z-50 px-4 py-3 safe-area-top">
-                <div className="max-w-2xl mx-auto flex items-center gap-3">
-                    <div className="w-11 h-11 bg-[#E63946] rounded-xl flex items-center justify-center font-bebas text-white text-xl shadow-lg shadow-red-500/20">DR</div>
-                    <div>
-                        <h1 className="font-bebas text-white text-xl tracking-wide">RAPPORT JOURNALIER</h1>
-                        <p className="text-[10px] text-gray-500 -mt-0.5">Groupe DR Électrique Inc.</p>
+        // Header with hidden test (triple-tap logo = test Supabase)
+        const Header = () => {
+            const [tapCount, setTapCount] = React.useState(0);
+            const tapTimer = React.useRef(null);
+            
+            const handleLogoTap = () => {
+                setTapCount(prev => prev + 1);
+                clearTimeout(tapTimer.current);
+                tapTimer.current = setTimeout(() => setTapCount(0), 600);
+                
+                if (tapCount >= 2) {
+                    setTapCount(0);
+                    if (window.testSupabase) {
+                        window.testSupabase();
+                    }
+                }
+            };
+            
+            return (
+                <header className="glass sticky top-0 z-50 px-4 py-3 safe-area-top">
+                    <div className="max-w-2xl mx-auto flex items-center gap-3">
+                        <div 
+                            onClick={handleLogoTap}
+                            className="w-11 h-11 bg-[#E63946] rounded-xl flex items-center justify-center font-bebas text-white text-xl shadow-lg shadow-red-500/20 cursor-pointer select-none"
+                        >DR</div>
+                        <div>
+                            <h1 className="font-bebas text-white text-xl tracking-wide">RAPPORT JOURNALIER</h1>
+                            <p className="text-[10px] text-gray-500 -mt-0.5">Groupe DR Electrique Inc.</p>
+                        </div>
                     </div>
-                </div>
-            </header>
-        );
+                </header>
+            );
+        };
         
         // Section Component
         const Section = ({ icon, title, subtitle, color, children }) => (
@@ -499,13 +586,19 @@
                                         {Icons.location} GPS
                                     </div>
                                 )}
-                                <button type="button"
-                                    onClick={() => setPhotos(prev => prev.filter(p => p.id !== photo.id))}
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        e.preventDefault();
+                                        setPhotos(prev => prev.filter(p => p.id !== photo.id));
+                                    }}
                                     className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg"
                                 >×</button>
                             </div>
                         ))}
-                        <button type="button"
+                        <button
+                            type="button"
                             onClick={() => inputRef.current?.click()}
                             className="aspect-square border-2 border-dashed rounded-xl flex flex-col items-center justify-center transition-all active:scale-95"
                             style={{ borderColor: `${accent}50`, color: accent }}
@@ -794,7 +887,7 @@ Si tu ne reconnais pas de matériel électrique, réponds: {"item": "Non identif
                                     ) : field.type === 'time-picker' ? (
                                         <TimePicker
                                             key={field.key}
-                                            value={row[field.key] || '06:14'}
+                                            value={row[field.key] || '06:00'}
                                             onChange={(val) => updateRow(row.id, field.key, val)}
                                             label={field.placeholder}
                                         />
@@ -812,6 +905,7 @@ Si tu ne reconnais pas de matériel électrique, réponds: {"item": "Non identif
                                 ))}
                             </div>
                             <button 
+                                type="button"
                                 onClick={() => removeRow(row.id)} 
                                 className="p-3 text-gray-600 hover:text-red-500 active:scale-95 transition-all rounded-xl"
                                 disabled={rows.length === 1}
@@ -821,6 +915,7 @@ Si tu ne reconnais pas de matériel électrique, réponds: {"item": "Non identif
                         </div>
                     ))}
                     <button 
+                        type="button"
                         onClick={addRow}
                         className="w-full py-3 border-2 border-dashed rounded-xl flex items-center justify-center gap-2 text-sm font-medium transition-all active:scale-[0.98]"
                         style={{ borderColor: `${color}40`, color: color }}
@@ -958,6 +1053,7 @@ Si tu ne reconnais pas de matériel électrique, réponds: {"item": "Non identif
                             <p className="text-gray-400 mb-1">Merci {data.redacteur?.split(' ')[0]}!</p>
                             <p className="text-sm text-gray-500 mb-8">Ton rapport a été transmis au dashboard.</p>
                             <button 
+                                type="button"
                                 onClick={resetForm}
                                 className="w-full py-4 bg-[#E63946] text-white font-bebas text-lg tracking-wide rounded-xl active:scale-[0.98] transition-transform"
                             >
@@ -983,6 +1079,7 @@ Si tu ne reconnais pas de matériel électrique, réponds: {"item": "Non identif
                             <p className="text-yellow-400 mb-1">Connexion échouée</p>
                             <p className="text-sm text-gray-500 mb-8">Ton rapport est sauvegardé localement et sera envoyé automatiquement quand la connexion sera rétablie.</p>
                             <button 
+                                type="button"
                                 onClick={resetForm}
                                 className="w-full py-4 bg-yellow-600 text-white font-bebas text-lg tracking-wide rounded-xl active:scale-[0.98] transition-transform"
                             >

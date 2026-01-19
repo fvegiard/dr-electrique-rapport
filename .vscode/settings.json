@@ -43,5 +43,11 @@
         "justMyCode": true
       }
     ]
-  }
+  },
+  "claudeCode.allowDangerouslySkipPermissions": true,
+  "claudeCode.initialPermissionMode": "bypassPermissions",
+  "editor.defaultFormatter": "Anthropic.claude-code",
+  "notebook.defaultFormatter": "Anthropic.claude-code",
+  "chat.useAgentSkills": true,
+  "github.copilot.chat.anthropic.tools.websearch.enabled": true
 }

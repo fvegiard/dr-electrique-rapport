@@ -291,6 +291,32 @@
         window.testSupabase = testSupabaseConnection;
         window.supabaseClient = supabase;
         
+        // TEST PHOTOS - expose pour debug
+        window._photoSetters = {};
+        window.testAddPhoto = (category = 'photosGenerales') => {
+            const setter = window._photoSetters[category];
+            if (!setter) {
+                console.error('Setter not found for', category);
+                return false;
+            }
+            const fakePhoto = {
+                id: generateId(),
+                data: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAFUlEQVR42mNk+M9QzwAEjDAGNzYAAIoaB/lnvYsAAAAASUVORK5CYII=',
+                timestamp: new Date().toISOString(),
+                category: category
+            };
+            setter(prev => [...(Array.isArray(prev) ? prev : []), fakePhoto]);
+            console.log('Photo ajoutee:', fakePhoto.id);
+            return fakePhoto.id;
+        };
+        window.testDeletePhoto = (category, photoId) => {
+            const setter = window._photoSetters[category];
+            if (!setter) return false;
+            setter(prev => (Array.isArray(prev) ? prev : []).filter(p => p.id !== photoId));
+            console.log('Photo supprimee:', photoId);
+            return true;
+        };
+        
         const submitRapport = async (rapport) => {
             console.log('SUBMIT START - Rapport:', rapport.redacteur, rapport.date);
             
@@ -953,6 +979,16 @@ Si tu ne reconnais pas de matériel électrique, réponds: {"item": "Non identif
             });
             
             const update = (key, val) => setData(prev => ({ ...prev, [key]: val }));
+            
+            // Expose setters pour tests
+            useEffect(() => {
+                window._photoSetters = {
+                    photosGenerales: (fn) => setData(prev => ({ ...prev, photosGenerales: typeof fn === 'function' ? fn(prev.photosGenerales) : fn })),
+                    photosAvant: (fn) => setData(prev => ({ ...prev, photosAvant: typeof fn === 'function' ? fn(prev.photosAvant) : fn })),
+                    photosApres: (fn) => setData(prev => ({ ...prev, photosApres: typeof fn === 'function' ? fn(prev.photosApres) : fn })),
+                    photosProblemes: (fn) => setData(prev => ({ ...prev, photosProblemes: typeof fn === 'function' ? fn(prev.photosProblemes) : fn }))
+                };
+            }, []);
             
             // Calculate hours from time range
             const calculateHours = (debut, fin) => {

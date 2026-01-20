@@ -1176,36 +1176,53 @@
             const { data: photosData, error: photosError } = await supabase
               .from('photos')
               .select('*');
+            if (photosError) {
+              console.warn('Supabase photos warning:', photosError);
+            }
 
             // Convertir snake_case -> camelCase
+            const hasPhotoTable = !photosError && Array.isArray(photosData) && photosData.length > 0;
+            const normalizeRapportPhotos = photos =>
+              (photos || []).map(p => ({
+                data: p.url || p.data || p.storageUrl || p.storagePath,
+                geolocation: p.gps || p.geolocation || null,
+              }));
+
             const converted = (rapportsData || []).map(r => {
               const rapport = snakeToCamel(r);
-              // Attacher les photos au rapport
-              const rapportPhotos = (photosData || []).filter(p => p.rapport_id === r.id);
-              rapport.photosGenerales = rapportPhotos
-                .filter(p => p.category === 'GENERAL')
-                .map(p => ({
-                  data: p.url,
-                  geolocation: { latitude: p.latitude, longitude: p.longitude },
-                }));
-              rapport.photosAvant = rapportPhotos
-                .filter(p => p.category === 'AVANT')
-                .map(p => ({
-                  data: p.url,
-                  geolocation: { latitude: p.latitude, longitude: p.longitude },
-                }));
-              rapport.photosApres = rapportPhotos
-                .filter(p => p.category === 'APRES')
-                .map(p => ({
-                  data: p.url,
-                  geolocation: { latitude: p.latitude, longitude: p.longitude },
-                }));
-              rapport.photosProblemes = rapportPhotos
-                .filter(p => p.category === 'PROBLEME')
-                .map(p => ({
-                  data: p.url,
-                  geolocation: { latitude: p.latitude, longitude: p.longitude },
-                }));
+              if (hasPhotoTable) {
+                // Attacher les photos au rapport depuis la table photos
+                const rapportPhotos = (photosData || []).filter(p => p.rapport_id === r.id);
+                rapport.photosGenerales = rapportPhotos
+                  .filter(p => p.category === 'GENERAL')
+                  .map(p => ({
+                    data: p.url,
+                    geolocation: { latitude: p.latitude, longitude: p.longitude },
+                  }));
+                rapport.photosAvant = rapportPhotos
+                  .filter(p => p.category === 'AVANT')
+                  .map(p => ({
+                    data: p.url,
+                    geolocation: { latitude: p.latitude, longitude: p.longitude },
+                  }));
+                rapport.photosApres = rapportPhotos
+                  .filter(p => p.category === 'APRES')
+                  .map(p => ({
+                    data: p.url,
+                    geolocation: { latitude: p.latitude, longitude: p.longitude },
+                  }));
+                rapport.photosProblemes = rapportPhotos
+                  .filter(p => p.category === 'PROBLEME')
+                  .map(p => ({
+                    data: p.url,
+                    geolocation: { latitude: p.latitude, longitude: p.longitude },
+                  }));
+              } else {
+                rapport.photosGenerales = normalizeRapportPhotos(rapport.photosGenerales);
+                rapport.photosAvant = normalizeRapportPhotos(rapport.photosAvant);
+                rapport.photosApres = normalizeRapportPhotos(rapport.photosApres);
+                rapport.photosProblemes = normalizeRapportPhotos(rapport.photosProblemes);
+              }
               return rapport;
             });
             setRapports(converted);

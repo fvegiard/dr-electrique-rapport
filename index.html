@@ -472,7 +472,10 @@
           projet_nom: rapport.projetNom,
           adresse: rapport.adresse,
           meteo: rapport.meteo,
-          temperature: rapport.temperature ? parseInt(rapport.temperature) : null,
+          temperature:
+            rapport.temperature === '' || rapport.temperature === null || rapport.temperature === undefined
+              ? null
+              : parseInt(rapport.temperature, 10),
           main_oeuvre: rapport.mainOeuvre || [],
           materiaux: rapport.materiaux || [],
           equipements: rapport.equipements || [],

@@ -994,7 +994,7 @@
       };
 
       // ============== PHOTO UPLOAD WITH GPS (Modification #3) ==============
-      const PhotoUploadGPS = ({ photos, setPhotos, label, accent = '#22c55e', category }) => {
+      const PhotoUploadGPS = ({ photos, setPhotos, label, accent = '#22c55e', category, projectId }) => {
         const inputRef = useRef();
         const [gpsStatus, setGpsStatus] = useState(null);
 
@@ -1019,7 +1019,7 @@
                 file,
                 geo,
                 category,
-                data.projet,
+                projectId || 'DEFAULT',
                 supabase
               );
 
@@ -2191,6 +2191,7 @@ Si tu ne reconnais pas de matériel électrique, réponds: {"item": "Non identif
                     label='Photo'
                     accent='#22c55e'
                     category='GENERALES'
+                    projectId={data.projet}
                   />
                 </div>
                 <div className='bg-black/30 rounded-xl p-3'>
@@ -2201,6 +2202,7 @@ Si tu ne reconnais pas de matériel électrique, réponds: {"item": "Non identif
                     label='Avant'
                     accent='#3b82f6'
                     category='AVANT'
+                    projectId={data.projet}
                   />
                 </div>
                 <div className='bg-black/30 rounded-xl p-3'>
@@ -2211,6 +2213,7 @@ Si tu ne reconnais pas de matériel électrique, réponds: {"item": "Non identif
                     label='Après'
                     accent='#22c55e'
                     category='APRES'
+                    projectId={data.projet}
                   />
                 </div>
                 <div className='bg-black/30 rounded-xl p-3 border border-red-500/30'>
@@ -2221,6 +2224,7 @@ Si tu ne reconnais pas de matériel électrique, réponds: {"item": "Non identif
                     label='Problème'
                     accent='#ef4444'
                     category='PROBLEMES'
+                    projectId={data.projet}
                   />
                 </div>
               </div>

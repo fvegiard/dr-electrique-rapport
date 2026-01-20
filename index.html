@@ -2191,7 +2191,10 @@ Si tu ne reconnais pas de matériel électrique, réponds: {"item": "Non identif
                   <p className='text-[10px] text-gray-400 mb-2 font-medium'>📸 GÉNÉRALES</p>
                   <PhotoUploadGPS
                     photos={data.photosGenerales}
-                    setPhotos={p => update('photosGenerales', p)}
+                    setPhotos={p => setData(prev => ({
+                      ...prev,
+                      photosGenerales: typeof p === 'function' ? p(prev.photosGenerales || []) : p
+                    }))}
                     label='Photo'
                     accent='#22c55e'
                     category='GENERALES'
@@ -2202,7 +2205,10 @@ Si tu ne reconnais pas de matériel électrique, réponds: {"item": "Non identif
                   <p className='text-[10px] text-blue-400 mb-2 font-medium'>🔜 AVANT</p>
                   <PhotoUploadGPS
                     photos={data.photosAvant}
-                    setPhotos={p => update('photosAvant', p)}
+                    setPhotos={p => setData(prev => ({
+                      ...prev,
+                      photosAvant: typeof p === 'function' ? p(prev.photosAvant || []) : p
+                    }))}
                     label='Avant'
                     accent='#3b82f6'
                     category='AVANT'
@@ -2213,7 +2219,10 @@ Si tu ne reconnais pas de matériel électrique, réponds: {"item": "Non identif
                   <p className='text-[10px] text-green-400 mb-2 font-medium'>✅ APRÈS</p>
                   <PhotoUploadGPS
                     photos={data.photosApres}
-                    setPhotos={p => update('photosApres', p)}
+                    setPhotos={p => setData(prev => ({
+                      ...prev,
+                      photosApres: typeof p === 'function' ? p(prev.photosApres || []) : p
+                    }))}
                     label='Après'
                     accent='#22c55e'
                     category='APRES'
@@ -2224,7 +2233,10 @@ Si tu ne reconnais pas de matériel électrique, réponds: {"item": "Non identif
                   <p className='text-[10px] text-red-400 mb-2 font-medium'>⚠️ PROBLÈMES</p>
                   <PhotoUploadGPS
                     photos={data.photosProblemes}
-                    setPhotos={p => update('photosProblemes', p)}
+                    setPhotos={p => setData(prev => ({
+                      ...prev,
+                      photosProblemes: typeof p === 'function' ? p(prev.photosProblemes || []) : p
+                    }))}
                     label='Problème'
                     accent='#ef4444'
                     category='PROBLEMES'

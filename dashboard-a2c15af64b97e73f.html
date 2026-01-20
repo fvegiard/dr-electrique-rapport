@@ -321,13 +321,18 @@
             </div>
         );
         
-        const Header = ({ userName, selectedDate, setSelectedDate }) => (
+        const Header = ({ userName, selectedDate, setSelectedDate, isLoading }) => (
             <div className="flex items-center justify-between mb-6">
-                <h1 className="font-bebas text-2xl tracking-wide" style={{color: '#00ff00', textShadow: '0 0 10px rgba(0,255,0,0.3)'}}>
-                    TABLEAU DE BORD
-                </h1>
+                <div className="flex items-center gap-3">
+                    <h1 className="font-bebas text-2xl tracking-wide" style={{color: '#00ff00', textShadow: '0 0 10px rgba(0,255,0,0.3)'}}>
+                        TABLEAU DE BORD
+                    </h1>
+                    {isLoading && (
+                        <div className="w-5 h-5 border-2 border-green-500 border-t-transparent rounded-full animate-spin"></div>
+                    )}
+                </div>
                 <div className="flex items-center gap-4">
-                    <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
+                    <input type="date" value={selectedDate || ''} onChange={(e) => setSelectedDate(e.target.value)} />
                     <div className="flex items-center gap-2">
                         <span className="text-gray-400 text-sm">{userName}</span>
                         <div className="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold text-sm">F</div>
@@ -734,16 +739,18 @@
         const App = () => {
             const [activeTab, setActiveTab] = useState('dashboard');
             const [rapports, setRapports] = useState([]);
-            const [selectedDate, setSelectedDate] = useState(getTodayStr()); // Show today's reports
+            const [selectedDate, setSelectedDate] = useState(null); // Will be set to most recent report date
             const [filterProjet, setFilterProjet] = useState(null);
+            const [isLoading, setIsLoading] = useState(true);
             
             const loadRapports = async () => {
+                setIsLoading(true);
                 try {
                     // Charger rapports
                     const { data: rapportsData, error: rapportsError } = await supabase
                         .from('rapports')
                         .select('*')
-                        .order('created_at', { ascending: false });
+                        .order('date', { ascending: false });
                     if (rapportsError) throw rapportsError;
                     
                     // Charger photos
@@ -763,11 +770,22 @@
                         return rapport;
                     });
                     setRapports(converted);
+                    
+                    // FIX: Auto-select most recent date with reports
+                    if (converted.length > 0 && !selectedDate) {
+                        const mostRecentDate = converted[0].date;
+                        setSelectedDate(mostRecentDate);
+                        console.log('📅 Auto-selected date:', mostRecentDate);
+                    }
+                    
                     console.log('✅ Loaded', converted.length, 'reports from Supabase');
-                    console.log('Report dates:', converted.map(r => r.date));
                 } catch (err) {
                     console.error('❌ Erreur Supabase:', err);
                     setRapports([]);
+                    // Fallback to today if error
+                    if (!selectedDate) setSelectedDate(getTodayStr());
+                } finally {
+                    setIsLoading(false);
                 }
             };
             
@@ -823,7 +841,7 @@
                 <div>
                     <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
                     <div className="main-content">
-                        <Header userName="Francis Vegiard" selectedDate={selectedDate} setSelectedDate={setSelectedDate} />
+                        <Header userName="Francis Vegiard" selectedDate={selectedDate || getTodayStr()} setSelectedDate={setSelectedDate} isLoading={isLoading} />
                         {renderContent()}
                     </div>
                 </div>

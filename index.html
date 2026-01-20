@@ -482,31 +482,31 @@
           problemes_securite: rapport.problemesSecurite || '',
           total_heures_mo: rapport.totalHeuresMO || 0,
           total_photos: rapport.totalPhotos || 0,
-          // Photos avec URLs de storage (pas base64)
+          // Photos avec URLs de storage ou base64 fallback
           photos_generales: (rapport.photosGenerales || []).map(p => ({
             id: p.id,
-            url: p.storageUrl || p.storagePath,
+            url: p.storageUrl || p.storagePath || p.data,
             timestamp: p.timestamp,
             gps: p.geolocation,
             metadata: p.metadata
           })),
           photos_avant: (rapport.photosAvant || []).map(p => ({
             id: p.id,
-            url: p.storageUrl || p.storagePath,
+            url: p.storageUrl || p.storagePath || p.data,
             timestamp: p.timestamp,
             gps: p.geolocation,
             metadata: p.metadata
           })),
           photos_apres: (rapport.photosApres || []).map(p => ({
             id: p.id,
-            url: p.storageUrl || p.storagePath,
+            url: p.storageUrl || p.storagePath || p.data,
             timestamp: p.timestamp,
             gps: p.geolocation,
             metadata: p.metadata
           })),
           photos_problemes: (rapport.photosProblemes || []).map(p => ({
             id: p.id,
-            url: p.storageUrl || p.storagePath,
+            url: p.storageUrl || p.storagePath || p.data,
             timestamp: p.timestamp,
             gps: p.geolocation,
             metadata: p.metadata
@@ -1580,7 +1580,8 @@ Si tu ne reconnais pas de matériel électrique, réponds: {"item": "Non identif
 
           // Calculate total hours from time ranges
           const totalHeuresMO = data.mainOeuvre.reduce((acc, m) => {
-            if (!m.employe) return acc;
+            // Count hours if employe is set OR if times are filled
+            if (!m.employe && !m.heureDebut) return acc;
             return acc + calculateHours(m.heureDebut, m.heureFin);
           }, 0);
 

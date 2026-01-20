@@ -145,5 +145,10 @@
   "cursor.vision.enabled": true,
   "cursor.webIntegration.enabled": true,
   "cursor.agenticMode.persistence": true,
-  "cursor.agenticMode.continuation": true
+  "cursor.agenticMode.continuation": true,
+  "workbench.editor.highlightModifiedTabs": true,
+  "workbench.editor.enablePreviewFromQuickOpen": true,
+  "workbench.editor.enablePreviewFromCodeNavigation": true,
+  "workbench.editor.decorations.badges": false,
+  "workbench.editor.alwaysShowEditorActions": true
 }

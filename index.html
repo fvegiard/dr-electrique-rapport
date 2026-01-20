@@ -591,7 +591,7 @@
                                 enabled: geo.enabled
                             }
                         };
-                        setPhotos(prev => [...prev, newPhoto]);
+                        setPhotos(prev => [...(prev || []), newPhoto]);
                     };
                     reader.readAsDataURL(file);
                 }
@@ -868,20 +868,20 @@ Si tu ne reconnais pas de matériel électrique, réponds: {"item": "Non identif
             const addRow = () => {
                 const newRow = { id: generateId() };
                 fields.forEach(f => newRow[f.key] = f.default || '');
-                setRows([...rows, newRow]);
+                setRows([...(rows || []), newRow]);
             };
-            
+
             const updateRow = (id, key, value) => {
-                setRows(rows.map(r => r.id === id ? { ...r, [key]: value } : r));
+                setRows((rows || []).map(r => r.id === id ? { ...r, [key]: value } : r));
             };
             
             const removeRow = (id) => {
-                if (rows.length > 1) setRows(rows.filter(r => r.id !== id));
+                if ((rows || []).length > 1) setRows((rows || []).filter(r => r.id !== id));
             };
-            
+
             return (
                 <div className="space-y-3">
-                    {rows.map((row) => (
+                    {(rows || []).map((row) => (
                         <div key={row.id} className="flex gap-2 animate-slide-up">
                             <div className="flex-1 grid gap-2" style={{ gridTemplateColumns: fields.map(f => f.width || '1fr').join(' ') }}>
                                 {fields.map(field => (
@@ -1006,7 +1006,7 @@ Si tu ne reconnais pas de matériel électrique, réponds: {"item": "Non identif
                     id: generateId(),
                     ...material
                 };
-                update('materiaux', [...data.materiaux, newMaterial]);
+                update('materiaux', [...(data.materiaux || []), newMaterial]);
             };
             
             const handleSubmit = async (e) => {
@@ -1024,7 +1024,7 @@ Si tu ne reconnais pas de matériel électrique, réponds: {"item": "Non identif
                 setStep('submitting');
                 
                 // Calculate total hours from time ranges
-                const totalHeuresMO = data.mainOeuvre.reduce((acc, m) => {
+                const totalHeuresMO = (data.mainOeuvre || []).reduce((acc, m) => {
                     if (!m.employe) return acc;
                     return acc + calculateHours(m.heureDebut, m.heureFin);
                 }, 0);
@@ -1034,12 +1034,12 @@ Si tu ne reconnais pas de matériel électrique, réponds: {"item": "Non identif
                     id: generateId(),
                     submittedAt: new Date().toISOString(),
                     totalHeuresMO,
-                    totalPhotos: data.photosGenerales.length + data.photosAvant.length + data.photosApres.length + data.photosProblemes.length,
-                    hasExtras: data.ordresTravail.some(o => o.isExtra),
-                    nbExtras: data.ordresTravail.filter(o => o.isExtra).length,
-                    totalExtras: data.ordresTravail.filter(o => o.isExtra).reduce((acc, o) => acc + (parseFloat(o.montantExtra) || 0), 0),
+                    totalPhotos: (data.photosGenerales?.length || 0) + (data.photosAvant?.length || 0) + (data.photosApres?.length || 0) + (data.photosProblemes?.length || 0),
+                    hasExtras: (data.ordresTravail || []).some(o => o.isExtra),
+                    nbExtras: (data.ordresTravail || []).filter(o => o.isExtra).length,
+                    totalExtras: (data.ordresTravail || []).filter(o => o.isExtra).reduce((acc, o) => acc + (parseFloat(o.montantExtra) || 0), 0),
                     // GPS data is already embedded in photos
-                    hasGPSPhotos: [...data.photosGenerales, ...data.photosAvant, ...data.photosApres, ...data.photosProblemes].some(p => p.geolocation?.enabled)
+                    hasGPSPhotos: [...(Array.isArray(data.photosGenerales) ? data.photosGenerales : []), ...(Array.isArray(data.photosAvant) ? data.photosAvant : []), ...(Array.isArray(data.photosApres) ? data.photosApres : []), ...(Array.isArray(data.photosProblemes) ? data.photosProblemes : [])].some(p => p?.geolocation?.enabled)
                 };
                 
                 try {
@@ -1207,13 +1207,13 @@ Si tu ne reconnais pas de matériel électrique, réponds: {"item": "Non identif
                     {/* MAIN D'OEUVRE - AVEC TIME PICKER */}
                     <Section icon={Icons.clock} title="TEMPS - MAIN D'OEUVRE" subtitle="Heures début/fin avec flèches" color="#3b82f6">
                         <div className="space-y-4">
-                            {data.mainOeuvre.map((row, idx) => (
+                            {(data.mainOeuvre || []).map((row, idx) => (
                                 <div key={row.id} className="bg-black/20 rounded-xl p-3 space-y-3 animate-slide-up">
                                     <div className="flex items-center justify-between">
                                         <select
                                             value={row.employe}
                                             onChange={(e) => {
-                                                const updated = [...data.mainOeuvre];
+                                                const updated = [...(data.mainOeuvre || [])];
                                                 updated[idx].employe = e.target.value;
                                                 update('mainOeuvre', updated);
                                             }}
@@ -1225,8 +1225,8 @@ Si tu ne reconnais pas de matériel électrique, réponds: {"item": "Non identif
                                         <button 
                                             type="button"
                                             onClick={() => {
-                                                if (data.mainOeuvre.length > 1) {
-                                                    update('mainOeuvre', data.mainOeuvre.filter(r => r.id !== row.id));
+                                                if ((data.mainOeuvre || []).length > 1) {
+                                                    update('mainOeuvre', (data.mainOeuvre || []).filter(r => r.id !== row.id));
                                                 }
                                             }}
                                             className="p-2 text-gray-600 hover:text-red-500"
@@ -1239,7 +1239,7 @@ Si tu ne reconnais pas de matériel électrique, réponds: {"item": "Non identif
                                         <TimePicker
                                             value={row.heureDebut}
                                             onChange={(val) => {
-                                                const updated = [...data.mainOeuvre];
+                                                const updated = [...(data.mainOeuvre || [])];
                                                 updated[idx].heureDebut = val;
                                                 update('mainOeuvre', updated);
                                             }}
@@ -1249,7 +1249,7 @@ Si tu ne reconnais pas de matériel électrique, réponds: {"item": "Non identif
                                         <TimePicker
                                             value={row.heureFin}
                                             onChange={(val) => {
-                                                const updated = [...data.mainOeuvre];
+                                                const updated = [...(data.mainOeuvre || [])];
                                                 updated[idx].heureFin = val;
                                                 update('mainOeuvre', updated);
                                             }}
@@ -1267,7 +1267,7 @@ Si tu ne reconnais pas de matériel électrique, réponds: {"item": "Non identif
                                         type="text"
                                         value={row.description}
                                         onChange={(e) => {
-                                            const updated = [...data.mainOeuvre];
+                                            const updated = [...(data.mainOeuvre || [])];
                                             updated[idx].description = e.target.value;
                                             update('mainOeuvre', updated);
                                         }}
@@ -1279,7 +1279,7 @@ Si tu ne reconnais pas de matériel électrique, réponds: {"item": "Non identif
                             
                             <button 
                                 type="button"
-                                onClick={() => update('mainOeuvre', [...data.mainOeuvre, { id: generateId(), employe: '', heureDebut: '06:00', heureFin: '14:15', description: '' }])}
+                                onClick={() => update('mainOeuvre', [...(data.mainOeuvre || []), { id: generateId(), employe: '', heureDebut: '06:00', heureFin: '14:15', description: '' }])}
                                 className="w-full py-3 border-2 border-dashed border-blue-500/40 rounded-xl text-blue-500 flex items-center justify-center gap-2 text-sm font-medium"
                             >
                                 {Icons.plus} Ajouter employé
@@ -1297,7 +1297,7 @@ Si tu ne reconnais pas de matériel électrique, réponds: {"item": "Non identif
                             <div className="border-t border-white/10 pt-4">
                                 <p className="text-xs text-gray-500 mb-3">Ou ajouter manuellement:</p>
                                 <DynamicRows
-                                    rows={data.materiaux}
+                                    rows={data.materiaux || []}
                                     setRows={(rows) => update('materiaux', rows)}
                                     fields={[
                                         { key: 'item', placeholder: 'Matériau', type: 'datalist', options: MATERIAUX_COMMUNS, width: '1fr' },
@@ -1314,7 +1314,7 @@ Si tu ne reconnais pas de matériel électrique, réponds: {"item": "Non identif
                     {/* ÉQUIPEMENTS */}
                     <Section icon={Icons.tool} title="ÉQUIPEMENTS" subtitle="Outils et machinerie" color="#8b5cf6">
                         <DynamicRows
-                            rows={data.equipements}
+                            rows={data.equipements || []}
                             setRows={(rows) => update('equipements', rows)}
                             fields={[
                                 { key: 'nom', placeholder: 'Equipement', type: 'select', options: ['Stanex', 'Perceur', 'Scie a chaine', 'Lift', 'Echafaud', 'Autre'], width: '1fr' },
@@ -1328,7 +1328,7 @@ Si tu ne reconnais pas de matériel électrique, réponds: {"item": "Non identif
                     {/* SOUS-TRAITANTS */}
                     <Section icon={Icons.users} title="SOUS-TRAITANTS" subtitle="Entreprises sur le chantier" color="#06b6d4">
                         <DynamicRows
-                            rows={data.soustraitants}
+                            rows={data.soustraitants || []}
                             setRows={(rows) => update('soustraitants', rows)}
                             fields={[
                                 { key: 'entreprise', placeholder: 'Entreprise', width: '1fr' },
@@ -1343,14 +1343,14 @@ Si tu ne reconnais pas de matériel électrique, réponds: {"item": "Non identif
                     {/* ORDRES DE TRAVAIL / EXTRAS */}
                     <Section icon={Icons.dollar} title="ORDRES DE TRAVAIL" subtitle="⚠️ Cocher les EXTRAS!" color="#eab308">
                         <div className="space-y-3">
-                            {data.ordresTravail.map((ordre, idx) => (
+                            {(data.ordresTravail || []).map((ordre, idx) => (
                                 <div key={ordre.id} className="bg-black/30 rounded-xl p-3 space-y-3 border border-white/5">
                                     <div className="flex gap-2">
                                         <input
                                             type="text"
                                             value={ordre.description}
                                             onChange={(e) => {
-                                                const updated = [...data.ordresTravail];
+                                                const updated = [...(data.ordresTravail || [])];
                                                 updated[idx].description = e.target.value;
                                                 update('ordresTravail', updated);
                                             }}
@@ -1360,8 +1360,8 @@ Si tu ne reconnais pas de matériel électrique, réponds: {"item": "Non identif
                                         <button 
                                             type="button"
                                             onClick={() => {
-                                                if (data.ordresTravail.length > 1) {
-                                                    update('ordresTravail', data.ordresTravail.filter(o => o.id !== ordre.id));
+                                                if ((data.ordresTravail || []).length > 1) {
+                                                    update('ordresTravail', (data.ordresTravail || []).filter(o => o.id !== ordre.id));
                                                 }
                                             }}
                                             className="p-3 text-gray-600"
@@ -1375,7 +1375,7 @@ Si tu ne reconnais pas de matériel électrique, réponds: {"item": "Non identif
                                                 type="checkbox"
                                                 checked={ordre.isExtra}
                                                 onChange={(e) => {
-                                                    const updated = [...data.ordresTravail];
+                                                    const updated = [...(data.ordresTravail || [])];
                                                     updated[idx].isExtra = e.target.checked;
                                                     update('ordresTravail', updated);
                                                 }}
@@ -1389,7 +1389,7 @@ Si tu ne reconnais pas de matériel électrique, réponds: {"item": "Non identif
                                                 inputMode="decimal"
                                                 value={ordre.montantExtra}
                                                 onChange={(e) => {
-                                                    const updated = [...data.ordresTravail];
+                                                    const updated = [...(data.ordresTravail || [])];
                                                     updated[idx].montantExtra = e.target.value;
                                                     update('ordresTravail', updated);
                                                 }}
@@ -1400,7 +1400,7 @@ Si tu ne reconnais pas de matériel électrique, réponds: {"item": "Non identif
                                         <select
                                             value={ordre.status}
                                             onChange={(e) => {
-                                                const updated = [...data.ordresTravail];
+                                                const updated = [...(data.ordresTravail || [])];
                                                 updated[idx].status = e.target.value;
                                                 update('ordresTravail', updated);
                                             }}
@@ -1415,7 +1415,7 @@ Si tu ne reconnais pas de matériel électrique, réponds: {"item": "Non identif
                             ))}
                             <button 
                                 type="button"
-                                onClick={() => update('ordresTravail', [...data.ordresTravail, { id: generateId(), description: '', isExtra: false, montantExtra: '', status: 'en_cours' }])}
+                                onClick={() => update('ordresTravail', [...(data.ordresTravail || []), { id: generateId(), description: '', isExtra: false, montantExtra: '', status: 'en_cours' }])}
                                 className="w-full py-3 border-2 border-dashed border-yellow-500/40 rounded-xl text-yellow-500 flex items-center justify-center gap-2 text-sm font-medium"
                             >
                                 {Icons.plus} Ajouter ordre de travail
@@ -1426,7 +1426,7 @@ Si tu ne reconnais pas de matériel électrique, réponds: {"item": "Non identif
                     {/* RÉUNIONS */}
                     <Section icon={Icons.meeting} title="RÉUNIONS" subtitle="Rencontres de chantier" color="#6366f1">
                         <DynamicRows
-                            rows={data.reunions}
+                            rows={data.reunions || []}
                             setRows={(rows) => update('reunions', rows)}
                             fields={[
                                 { key: 'type', placeholder: 'Type', type: 'select', options: ['Coordination', 'Sécurité', 'Client', 'Ingénieur', 'Autre'], width: '100px' },
@@ -1522,14 +1522,16 @@ Si tu ne reconnais pas de matériel électrique, réponds: {"item": "Non identif
                         </div>
                     </Section>
                     
-                    {/* SUBMIT BUTTON */}
-                    <button
-                        type="submit"
-                        className="fixed bottom-6 left-4 right-4 max-w-2xl mx-auto py-5 bg-[#E63946] text-white font-bebas text-xl tracking-wider rounded-2xl flex items-center justify-center gap-3 shadow-2xl shadow-red-500/30 animate-pulse-btn active:scale-[0.98] transition-transform z-40"
-                    >
-                        {Icons.send}
-                        ENVOYER LE RAPPORT
-                    </button>
+                    {/* SUBMIT BUTTON - Container has pointer-events-none to not intercept clicks on form elements */}
+                    <div className="fixed bottom-6 left-4 right-4 max-w-2xl mx-auto z-40 pointer-events-none">
+                        <button
+                            type="submit"
+                            className="w-full py-5 bg-[#E63946] text-white font-bebas text-xl tracking-wider rounded-2xl flex items-center justify-center gap-3 shadow-2xl shadow-red-500/30 animate-pulse-btn active:scale-[0.98] transition-transform pointer-events-auto"
+                        >
+                            {Icons.send}
+                            ENVOYER LE RAPPORT
+                        </button>
+                    </div>
                 </form>
             );
         };

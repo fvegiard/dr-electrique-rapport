@@ -155,7 +155,7 @@ const RapportForm: React.FC = () => {
     };
 
     try {
-      // 1. Submit to Supabase
+      // 1. Submit rapport to Supabase
       const { data: result, error } = await supabase
         .from('rapports')
         .insert([rapportForSubmit])
@@ -164,9 +164,41 @@ const RapportForm: React.FC = () => {
       if (error) throw error;
       
       console.log('Rapport submitted:', result);
-      setStep('success');
       
-      // 2. Email Backup (Optional - implementation skipped for brevity, can be added later)
+      // 2. INSERT photos into photos table (for dashboard queries)
+      const rapportId = result?.[0]?.id;
+      if (rapportId) {
+        const allPhotos = [
+          ...data.photosGenerales.map(p => ({ ...p, category: 'GENERAL' })),
+          ...data.photosAvant.map(p => ({ ...p, category: 'AVANT' })),
+          ...data.photosApres.map(p => ({ ...p, category: 'APRES' })),
+          ...data.photosProblemes.map(p => ({ ...p, category: 'PROBLEME' })),
+        ];
+
+        if (allPhotos.length > 0) {
+          const photosToInsert = allPhotos.map(photo => ({
+            rapport_id: rapportId,
+            category: photo.category,
+            url: photo.storageUrl || photo.data,
+            latitude: photo.geolocation?.latitude || null,
+            longitude: photo.geolocation?.longitude || null,
+            gps_accuracy: photo.geolocation?.accuracy || null,
+          }));
+
+          const { error: photosError } = await supabase
+            .from('photos')
+            .insert(photosToInsert);
+
+          if (photosError) {
+            console.error('Photos insert error (non-blocking):', photosError);
+            // Non-blocking: rapport is saved, photos in JSON backup
+          } else {
+            console.log(`${photosToInsert.length} photos inserted into photos table`);
+          }
+        }
+      }
+
+      setStep('success');
       
     } catch (error: any) {
       console.error('Submit error:', error);

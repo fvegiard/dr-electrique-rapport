@@ -1,0 +1,90 @@
+name: Deploy Production
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Wait for Netlify production deploy
+        id: netlify
+        run: |
+          echo "Waiting for Netlify production deploy..."
+          SITE_ID="${{ secrets.NETLIFY_SITE_ID }}"
+          AUTH_TOKEN="${{ secrets.NETLIFY_AUTH_TOKEN }}"
+          COMMIT_SHA="${{ github.sha }}"
+
+          MAX_ATTEMPTS=30
+          ATTEMPT=0
+
+          while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+            RESPONSE=$(curl -s -H "Authorization: Bearer $AUTH_TOKEN" \
+              "https://api.netlify.com/api/v1/sites/$SITE_ID/deploys?per_page=5")
+
+            DEPLOY_URL=$(echo "$RESPONSE" | jq -r --arg sha "$COMMIT_SHA" \
+              '.[] | select(.commit_ref == $sha and .state == "ready") | .ssl_url' | head -1)
+
+            if [ -n "$DEPLOY_URL" ] && [ "$DEPLOY_URL" != "null" ]; then
+              echo "Deploy ready: $DEPLOY_URL"
+              echo "url=$DEPLOY_URL" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+
+            echo "Attempt $((ATTEMPT + 1))/$MAX_ATTEMPTS - Deploy not ready yet..."
+            sleep 10
+            ATTEMPT=$((ATTEMPT + 1))
+          done
+
+          echo "Timeout waiting for deploy"
+          exit 1
+
+      - name: Run smoke tests
+        run: npx playwright test --grep @smoke
+        env:
+          BASE_URL: ${{ steps.netlify.outputs.url }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+
+      - name: Upload test artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-test-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+
+      - name: Notify on failure (Discord)
+        if: failure() && secrets.DISCORD_WEBHOOK_URL != ''
+        run: |
+          curl -H "Content-Type: application/json" \
+            -d "{\"content\": \"🚨 **Production deploy failed!**\n\nCommit: ${{ github.sha }}\nAuthor: ${{ github.actor }}\nWorkflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
+            ${{ secrets.DISCORD_WEBHOOK_URL }}
+
+      - name: Notify on failure (Slack)
+        if: failure() && secrets.SLACK_WEBHOOK_URL != ''
+        run: |
+          curl -X POST -H "Content-Type: application/json" \
+            -d "{\"text\": \"🚨 *Production deploy failed!*\n\nCommit: ${{ github.sha }}\nAuthor: ${{ github.actor }}\nWorkflow: <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>\"}" \
+            ${{ secrets.SLACK_WEBHOOK_URL }}

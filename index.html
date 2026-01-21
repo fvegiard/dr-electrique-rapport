@@ -316,7 +316,121 @@
             console.log('Photo supprimee:', photoId);
             return true;
         };
-        
+
+        // ============== PHOTO UPLOAD UTILITIES ==============
+
+        // Convert base64 data URL to Blob for Supabase Storage upload
+        const base64ToBlob = (base64DataUrl) => {
+            try {
+                const [header, base64Data] = base64DataUrl.split(',');
+                const mimeMatch = header.match(/:(.*?);/);
+                const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+                const byteCharacters = atob(base64Data);
+                const byteNumbers = new Array(byteCharacters.length);
+                for (let i = 0; i < byteCharacters.length; i++) {
+                    byteNumbers[i] = byteCharacters.charCodeAt(i);
+                }
+                const byteArray = new Uint8Array(byteNumbers);
+                return new Blob([byteArray], { type: mimeType });
+            } catch (error) {
+                console.error('base64ToBlob error:', error);
+                return null;
+            }
+        };
+
+        // Upload all photos to Supabase Storage and insert metadata
+        const uploadPhotosToSupabase = async (rapportId, photosGenerales, photosAvant, photosApres, photosProblemes) => {
+            const results = { success: 0, failed: 0, errors: [] };
+
+            // Defensive: ensure arrays exist
+            const allPhotos = [
+                ...(Array.isArray(photosGenerales) ? photosGenerales : []).map(p => ({ ...p, category: 'generales' })),
+                ...(Array.isArray(photosAvant) ? photosAvant : []).map(p => ({ ...p, category: 'avant' })),
+                ...(Array.isArray(photosApres) ? photosApres : []).map(p => ({ ...p, category: 'apres' })),
+                ...(Array.isArray(photosProblemes) ? photosProblemes : []).map(p => ({ ...p, category: 'problemes' }))
+            ];
+
+            console.log(`PHOTO UPLOAD START - ${allPhotos.length} photos to upload for rapport ${rapportId}`);
+
+            if (allPhotos.length === 0) {
+                console.log('No photos to upload');
+                return results;
+            }
+
+            for (const photo of allPhotos) {
+                try {
+                    // Convert base64 to blob
+                    const blob = base64ToBlob(photo.data);
+                    if (!blob) {
+                        console.warn(`Failed to convert photo ${photo.id} to blob`);
+                        results.failed++;
+                        results.errors.push({ id: photo.id, error: 'Blob conversion failed' });
+                        continue;
+                    }
+
+                    // Generate unique filename
+                    const extension = blob.type.split('/')[1] || 'jpg';
+                    const filename = `${rapportId}/${photo.category}/${photo.id}.${extension}`;
+
+                    // Upload to Supabase Storage
+                    const { data: uploadData, error: uploadError } = await supabase.storage
+                        .from('rapport-photos')
+                        .upload(filename, blob, {
+                            contentType: blob.type,
+                            upsert: true
+                        });
+
+                    if (uploadError) {
+                        console.warn(`Storage upload failed for ${photo.id}:`, uploadError.message);
+                        results.failed++;
+                        results.errors.push({ id: photo.id, error: uploadError.message });
+                        continue;
+                    }
+
+                    // Get public URL
+                    const { data: urlData } = supabase.storage
+                        .from('rapport-photos')
+                        .getPublicUrl(filename);
+
+                    // Insert metadata into photos table
+                    const photoMetadata = {
+                        rapport_id: rapportId,
+                        category: photo.category,
+                        filename: filename,
+                        url: urlData?.publicUrl || null,
+                        timestamp: photo.timestamp || new Date().toISOString(),
+                        latitude: photo.geolocation?.latitude || null,
+                        longitude: photo.geolocation?.longitude || null,
+                        gps_accuracy: photo.geolocation?.accuracy || null,
+                        gps_enabled: photo.geolocation?.enabled || false
+                    };
+
+                    const { error: insertError } = await supabase
+                        .from('photos')
+                        .insert([photoMetadata]);
+
+                    if (insertError) {
+                        console.warn(`Photo metadata insert failed for ${photo.id}:`, insertError.message);
+                        // Photo uploaded but metadata failed - still count as partial success
+                        results.failed++;
+                        results.errors.push({ id: photo.id, error: `Metadata: ${insertError.message}` });
+                        continue;
+                    }
+
+                    results.success++;
+                    console.log(`Photo ${photo.id} uploaded successfully: ${filename}`);
+
+                } catch (error) {
+                    console.error(`Exception uploading photo ${photo.id}:`, error);
+                    results.failed++;
+                    results.errors.push({ id: photo.id, error: error.message });
+                }
+            }
+
+            console.log(`PHOTO UPLOAD COMPLETE - Success: ${results.success}, Failed: ${results.failed}`);
+            return results;
+        };
+
         const submitRapport = async (rapport) => {
             console.log('SUBMIT START - Rapport:', rapport.redacteur, rapport.date);
             
@@ -369,10 +483,24 @@
             }
             
             console.log('SUCCESS! Rapport saved with ID:', data[0].id);
-            
+
+            // Upload photos to Supabase Storage (non-blocking)
+            uploadPhotosToSupabase(
+                data[0].id,
+                rapport.photosGenerales,
+                rapport.photosAvant,
+                rapport.photosApres,
+                rapport.photosProblemes
+            ).then(photoResults => {
+                console.log('Photo upload results:', photoResults);
+                if (photoResults.failed > 0) {
+                    console.warn('Some photos failed to upload:', photoResults.errors);
+                }
+            }).catch(e => console.warn('Photo upload failed:', e));
+
             // Email backup (non-blocking)
             sendEmailBackup(rapport).catch(e => console.warn('Email backup failed:', e));
-            
+
             return data[0];
         };
         
@@ -617,7 +745,7 @@
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         e.preventDefault();
-                                        setPhotos(prev => prev.filter(p => p.id !== photo.id));
+                                        setPhotos(prev => (Array.isArray(prev) ? prev : []).filter(p => p.id !== photo.id));
                                     }}
                                     className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg"
                                 >×</button>

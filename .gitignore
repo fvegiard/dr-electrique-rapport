@@ -35,6 +35,10 @@ yarn-error.log*
 # Testing
 .coverage
 htmlcov/
+test-results/
+playwright-report/
+playwright/.cache/
+.env.test.local
 
 # Temporary
 *.pem

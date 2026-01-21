@@ -617,7 +617,7 @@
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         e.preventDefault();
-                                        setPhotos(prev => prev.filter(p => p.id !== photo.id));
+                                        setPhotos(prev => (Array.isArray(prev) ? prev : []).filter(p => p.id !== photo.id));
                                     }}
                                     className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg"
                                 >×</button>

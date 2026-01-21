@@ -110,63 +110,90 @@ const RapportForm: React.FC = () => {
       return acc + calculateHours(m.heureDebut, m.heureFin);
     }, 0);
 
-    const rapportForSubmit: any = {
-      ...data, // Spread existing data
-      // Add computed fields
+    // Helper function to map photos correctly
+    const mapPhotos = (photos: typeof data.photosGenerales) =>
+      (photos || [])
+        .filter(p => p.storageUrl || p.preview)
+        .map(p => ({
+          id: p.id,
+          url: p.storageUrl || p.preview || '',
+          timestamp: p.timestamp,
+          category: p.category,
+          gps: p.geolocation ? {
+            latitude: p.geolocation.latitude,
+            longitude: p.geolocation.longitude,
+            accuracy: p.geolocation.accuracy,
+            enabled: p.geolocation.enabled
+          } : null,
+          metadata: p.metadata || null
+        }));
+
+    // DEBUG: Log photos before submit
+    console.log('[Submit] Photos state:', {
+      generales: data.photosGenerales?.length || 0,
+      avant: data.photosAvant?.length || 0,
+      apres: data.photosApres?.length || 0,
+      problemes: data.photosProblemes?.length || 0,
+      sampleGeneral: data.photosGenerales?.[0]
+    });
+
+    // Build rapport object - EXPLICIT MAPPING (no spread)
+    const rapportForSubmit = {
+      date: data.date,
+      redacteur: data.redacteur,
+      projet: data.projet,
+      projet_nom: data.projetNom || null,
+      adresse: data.adresse || null,
+      meteo: data.meteo || null,
+      temperature: data.temperature ? Number(data.temperature) : null,
+
+      main_oeuvre: data.mainOeuvre || [],
+      materiaux: data.materiaux || [],
+      equipements: data.equipements || [],
+      ordres_travail: data.ordresTravail || [],
+      reunions: data.reunions || [],
+
+      notes_generales: data.notesGenerales || null,
+      problemes_securite: data.problemesSecurite || null,
+
       total_heures_mo: totalHeuresMO,
       total_photos:
-        (data.photosGenerales || []).length +
-        (data.photosAvant || []).length +
-        (data.photosApres || []).length +
-        (data.photosProblemes || []).length,
+        (data.photosGenerales?.length || 0) +
+        (data.photosAvant?.length || 0) +
+        (data.photosApres?.length || 0) +
+        (data.photosProblemes?.length || 0),
       has_extras: (data.ordresTravail || []).some(o => o.isExtra),
       total_extras: (data.ordresTravail || [])
         .filter(o => o.isExtra)
         .reduce((acc, o) => acc + (parseFloat(o.montantExtra) || 0), 0),
-      
-      // Transform Arrays for Supabase (Snake Case Mapping done here manually or via API logic)
-      // Since the original code did manual mapping, let's replicate that structure for safety
-      date: data.date,
-      redacteur: data.redacteur,
-      projet: data.projet,
-      // Mapping Photos to ensure URL presence
-      photos_generales: (data.photosGenerales || []).map(p => ({
-         id: p.id, url: p.storageUrl || p.data, timestamp: p.timestamp, gps: p.geolocation
-      })),
-      photos_avant: (data.photosAvant || []).map(p => ({
-         id: p.id, url: p.storageUrl || p.data, timestamp: p.timestamp, gps: p.geolocation
-      })),
-      photos_apres: (data.photosApres || []).map(p => ({
-         id: p.id, url: p.storageUrl || p.data, timestamp: p.timestamp, gps: p.geolocation
-      })),
-      photos_problemes: (data.photosProblemes || []).map(p => ({
-         id: p.id, url: p.storageUrl || p.data, timestamp: p.timestamp, gps: p.geolocation
-      })),
-      
-      // Other arrays
-      main_oeuvre: data.mainOeuvre,
-      materiaux: data.materiaux,
-      equipements: data.equipements,
-      ordres_travail: data.ordresTravail,
-      reunions: data.reunions,
-      
-      // Text fields
-      notes_generales: data.notesGenerales,
-      problemes_securite: data.problemesSecurite,
+
+      photos_generales: mapPhotos(data.photosGenerales || []),
+      photos_avant: mapPhotos(data.photosAvant || []),
+      photos_apres: mapPhotos(data.photosApres || []),
+      photos_problemes: mapPhotos(data.photosProblemes || [])
     };
 
+    // DEBUG: Log final payload
+    console.log('[Submit] Rapport payload photos:', {
+      photos_generales: rapportForSubmit.photos_generales,
+      photos_avant: rapportForSubmit.photos_avant,
+      photos_apres: rapportForSubmit.photos_apres,
+      photos_problemes: rapportForSubmit.photos_problemes
+    });
+
     try {
-      // 1. Submit rapport to Supabase
       const { data: result, error } = await supabase
         .from('rapports')
         .insert([rapportForSubmit])
         .select();
 
-      if (error) throw error;
-      
-      console.log('Rapport submitted:', result);
-      
-      // 2. INSERT photos into photos table with retry logic
+      if (error) {
+        console.error('[Submit] Supabase error:', error);
+        throw error;
+      }
+
+      console.log('[Submit] Rapport saved:', result?.[0]?.id);
+
       const rapportId = result?.[0]?.id;
       if (rapportId) {
         const photoGroups = [
@@ -182,18 +209,17 @@ const RapportForm: React.FC = () => {
           const photoResult = await uploadPhotosWithRetry(photoGroups, rapportId, supabase);
 
           if (photoResult.success) {
-            console.log(`[PhotoTransaction] ${photoResult.insertedCount} photos inserted successfully`);
+            console.log(`[Submit] ${photoResult.insertedCount} photos inserted`);
           } else {
-            console.error('[PhotoTransaction] Failed after retries:', photoResult.errors);
-            // Non-blocking: rapport is saved, photos in JSON backup within rapports table
+            console.error('[Submit] Photo insert failed:', photoResult.errors);
           }
         }
       }
 
       setStep('success');
-      
+
     } catch (error: any) {
-      console.error('Submit error:', error);
+      console.error('[Submit] Error:', error);
       savePendingRapport({ ...data, errorMsg: error.message });
       setStep('offline');
     }

@@ -1,0 +1,313 @@
+name: DR Électrique CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    # Health check every 6 hours
+    - cron: '0 */6 * * *'
+
+env:
+  SUPABASE_URL: https://iawsshgkogntmdzrfjyw.supabase.co
+  NETLIFY_SITE_ID: bc99f38e-70f5-4eb9-8df6-4900c66fae04
+
+jobs:
+  # ============================================
+  # TEST JOB: Validate code and connections
+  # ============================================
+  test:
+    name: Test & Validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # --- Supabase Health Checks ---
+      - name: Test Supabase REST API
+        run: |
+          echo "Testing Supabase connection..."
+          response=$(curl -s -w "\n%{http_code}" \
+            "${{ env.SUPABASE_URL }}/rest/v1/rapports?select=id&limit=1" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}")
+
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+
+          echo "HTTP Status: $http_code"
+          echo "Response: $body"
+
+          if [ "$http_code" != "200" ]; then
+            echo "::error::Supabase REST API failed with status $http_code"
+            exit 1
+          fi
+          echo "✅ Supabase REST API OK"
+
+      - name: Test Supabase Storage
+        run: |
+          echo "Testing Supabase Storage..."
+          response=$(curl -s -w "\n%{http_code}" \
+            "${{ env.SUPABASE_URL }}/storage/v1/bucket/photos" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}")
+
+          http_code=$(echo "$response" | tail -n1)
+
+          if [ "$http_code" = "200" ]; then
+            echo "✅ Storage bucket 'photos' exists"
+          elif [ "$http_code" = "404" ]; then
+            echo "::warning::Storage bucket 'photos' not found - photo upload will fail"
+          else
+            echo "::warning::Storage check returned status $http_code"
+          fi
+
+      # --- Code Validation ---
+      - name: Validate HTML Structure
+        run: |
+          echo "Checking critical functions..."
+
+          # Check for required functions
+          functions=("submitRapport" "PhotoUploadGPS" "calculateHours")
+          for func in "${functions[@]}"; do
+            if grep -q "$func" index.html; then
+              echo "✅ Found: $func"
+            else
+              echo "::error::Missing critical function: $func"
+              exit 1
+            fi
+          done
+
+      - name: Check for Common Bugs
+        run: |
+          echo "Scanning for known bug patterns..."
+
+          # Check for unsafe array spreads (should use || [])
+          if grep -P '\[\.\.\.\w+\]' index.html | grep -v '|| \[\]' | grep -v 'prev ||' > /dev/null; then
+            echo "::warning::Found potential unsafe array spread (missing || [])"
+          fi
+
+          # Check for buttons without type attribute
+          button_count=$(grep -c '<button' index.html || echo "0")
+          typed_button_count=$(grep -c 'type="button"' index.html || echo "0")
+          submit_button_count=$(grep -c 'type="submit"' index.html || echo "0")
+
+          echo "Total buttons: $button_count"
+          echo "type='button': $typed_button_count"
+          echo "type='submit': $submit_button_count"
+
+          echo "✅ Bug scan complete"
+
+      - name: Validate Netlify Functions
+        run: |
+          if [ -f "netlify/functions/claude-vision.js" ]; then
+            echo "✅ Claude Vision function exists"
+            node --check netlify/functions/claude-vision.js
+            echo "✅ Function syntax OK"
+          else
+            echo "::warning::Claude Vision function not found"
+          fi
+
+  # ============================================
+  # DEPLOY JOB: Deploy to Netlify
+  # ============================================
+  deploy:
+    name: Deploy to Netlify
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Netlify
+        uses: nwtgck/actions-netlify@v3
+        with:
+          publish-dir: '.'
+          production-deploy: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          deploy-message: "Deploy from GitHub Actions - ${{ github.sha }}"
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ env.NETLIFY_SITE_ID }}
+
+      - name: Verify Deployment
+        run: |
+          echo "Waiting for deployment to propagate..."
+          sleep 10
+
+          response=$(curl -s -w "\n%{http_code}" "https://dr-electrique-rapport.netlify.app")
+          http_code=$(echo "$response" | tail -n1)
+
+          if [ "$http_code" = "200" ]; then
+            echo "✅ Site is live and responding"
+          else
+            echo "::warning::Site returned status $http_code"
+          fi
+
+  # ============================================
+  # NOTIFY JOB: Create issue on failure
+  # ============================================
+  notify-on-failure:
+    name: Notify on Failure
+    needs: [test, deploy]
+    runs-on: ubuntu-latest
+    if: failure() && github.event_name == 'push'
+
+    steps:
+      - name: Create GitHub Issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = `CI/CD Failed: ${context.sha.substring(0, 7)}`;
+            const body = `
+            ## CI/CD Pipeline Failed
+
+            **Commit:** ${context.sha}
+            **Branch:** ${context.ref}
+            **Workflow Run:** ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}
+
+            ### What to check:
+            - [ ] Supabase connection (check API keys)
+            - [ ] HTML validation (check for syntax errors)
+            - [ ] Netlify deployment (check auth token)
+
+            ---
+            *Auto-generated by CI/CD pipeline*
+            `;
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              body: body,
+              labels: ['bug', 'ci-cd']
+            });
+
+  # ============================================
+  # HEALTH CHECK JOB: Scheduled monitoring
+  # ============================================
+  health-check:
+    name: Scheduled Health Check
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check Production Site
+        id: health
+        run: |
+          echo "Running scheduled health check..."
+
+          # Check main site
+          site_status=$(curl -s -o /dev/null -w "%{http_code}" "https://dr-electrique-rapport.netlify.app")
+          echo "Site status: $site_status"
+          echo "site_status=$site_status" >> $GITHUB_OUTPUT
+
+          # Check Supabase API
+          api_status=$(curl -s -o /dev/null -w "%{http_code}" \
+            "${{ env.SUPABASE_URL }}/rest/v1/" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}")
+          echo "Supabase API status: $api_status"
+          echo "api_status=$api_status" >> $GITHUB_OUTPUT
+
+          # Check Supabase Database
+          db_status=$(curl -s -o /dev/null -w "%{http_code}" \
+            "${{ env.SUPABASE_URL }}/rest/v1/rapports?select=id&limit=1" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}")
+          echo "Supabase DB status: $db_status"
+          echo "db_status=$db_status" >> $GITHUB_OUTPUT
+
+          # Check Dashboard
+          dashboard_status=$(curl -s -o /dev/null -w "%{http_code}" "https://dr-electrique-rapport.netlify.app/dashboard-a2c15af64b97e73f.html")
+          echo "Dashboard status: $dashboard_status"
+          echo "dashboard_status=$dashboard_status" >> $GITHUB_OUTPUT
+
+          # Determine overall health
+          if [ "$site_status" != "200" ] || [ "$api_status" != "200" ] || [ "$db_status" != "200" ]; then
+            echo "health=FAILED" >> $GITHUB_OUTPUT
+            echo "::error::Health check failed - Site: $site_status, API: $api_status, DB: $db_status"
+            exit 1
+          fi
+
+          echo "health=PASSED" >> $GITHUB_OUTPUT
+          echo "✅ All systems operational"
+
+      - name: Create Issue on Health Check Failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = `Health Check Failed - ${new Date().toISOString().split('T')[0]}`;
+
+            // Check if issue already exists today
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: 'health-check',
+              state: 'open'
+            });
+
+            const existingIssue = issues.data.find(i => i.title === title);
+
+            const body = `
+            ## Scheduled Health Check Failed
+
+            **Time:** ${new Date().toISOString()}
+            **Workflow Run:** ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}
+
+            ### Status Report
+            | Check | Status |
+            |-------|--------|
+            | Production Site | ${{ steps.health.outputs.site_status || 'N/A' }} |
+            | Supabase API | ${{ steps.health.outputs.api_status || 'N/A' }} |
+            | Supabase Database | ${{ steps.health.outputs.db_status || 'N/A' }} |
+            | Dashboard | ${{ steps.health.outputs.dashboard_status || 'N/A' }} |
+
+            ### Recovery Steps
+            1. Check [Supabase Status](https://status.supabase.com)
+            2. Check [Netlify Status](https://www.netlifystatus.com)
+            3. Verify GitHub Secrets are set correctly
+            4. Run \`scripts/health-check.ps1\` locally for detailed diagnostics
+            5. Check TASK.md for current project status
+
+            ### Quick Fixes
+            - **Site down:** Run \`netlify deploy --prod\`
+            - **Supabase down:** Wait or check RLS policies
+            - **Database error:** Check table permissions in Supabase Dashboard
+
+            ---
+            *Auto-generated by scheduled health check*
+            `;
+
+            if (existingIssue) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existingIssue.number,
+                body: `### Health Check Still Failing\n\n${body}`
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: title,
+                body: body,
+                labels: ['bug', 'health-check', 'automated']
+              });
+            }

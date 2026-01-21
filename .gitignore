@@ -1,7 +1,10 @@
 # Local Netlify folder
 .netlify
+
 # Dependencies
 node_modules/
+.pnpm-debug.log*
+.yarn-integrity
 .venv/
 __pycache__/
 
@@ -10,33 +13,56 @@ __pycache__/
 .env.local
 .env.*.local
 .env.production
+.env.development
 
 # Build outputs
 dist/
 build/
+.vite/
+*.tsbuildinfo
 
 # Logs
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 .pytest_cache/
+scripts/logs/*.log
+
+# Cursor AI
+.cursor-prompt.md
 
 # IDE
 .idea/
+.vscode/settings.json
+.vscode/launch.json
 *.swp
 *.swo
 *~
-.vscode/launch.json
 
 # OS
 .DS_Store
+Thumbs.db
 
 # Testing
 .coverage
+coverage/
 htmlcov/
+.nyc_output/
 
 # Temporary
 *.pem
+*.key
+*.crt
 screenshot.png
 .vercel/
+.turbo/
+
+# Cursor
+.cursor/logs/
+.cursor/cache/
+
+# MCP
+mcp-*/

@@ -5,6 +5,7 @@ Système de rapports journaliers pour chantiers électriques avec Supabase et Cl
 ## 🚀 Quick Start
 
 ### Installation
+
 ```bash
 # Windows
 setup.bat
@@ -14,12 +15,14 @@ bash setup.sh
 ```
 
 ### Development
+
 ```bash
 npm run dev
 # Open http://localhost:8002
 ```
 
 ### Production Deployment
+
 ```bash
 npm run deploy
 ```
@@ -27,6 +30,7 @@ npm run deploy
 ## 📋 Features
 
 ### Employee Report Form (`index.html`)
+
 - ✅ Time picker with arrow controls
 - ✅ Claude Vision AI for material detection
 - ✅ GPS geolocation on photos
@@ -35,6 +39,7 @@ npm run deploy
 - ✅ Real-time Supabase sync
 
 ### Admin Dashboard (`dashboard-a2c15af64b97e73f.html`)
+
 - ✅ Real-time updates via Supabase subscription
 - ✅ Missing reports alert by foreman
 - ✅ Unbilled extras tracking
@@ -44,13 +49,13 @@ npm run deploy
 
 ## 🛠 Tech Stack
 
-| Layer | Technology |
-|-------|------------|
-| **Frontend** | React 18 + Tailwind CSS |
-| **Backend** | Supabase (PostgreSQL + Realtime) |
-| **AI** | Claude Vision API (material detection) |
-| **Hosting** | Netlify (static files) |
-| **Dev Server** | Python HTTP server |
+| Layer          | Technology                             |
+| -------------- | -------------------------------------- |
+| **Frontend**   | React 18 + Tailwind CSS                |
+| **Backend**    | Supabase (PostgreSQL + Realtime)       |
+| **AI**         | Claude Vision API (material detection) |
+| **Hosting**    | Netlify (static files)                 |
+| **Dev Server** | Python HTTP server                     |
 
 ## 📦 Project Structure
 
@@ -80,16 +85,17 @@ NETLIFY_AUTH_TOKEN=your-token
 
 ## 🌐 URLs
 
-| Type | URL |
-|------|-----|
-| **Local Dev** | http://localhost:8002 |
-| **Employee Form** | http://localhost:8002/ |
+| Type                | URL                                                   |
+| ------------------- | ----------------------------------------------------- |
+| **Local Dev**       | http://localhost:8002                                 |
+| **Employee Form**   | http://localhost:8002/                                |
 | **Admin Dashboard** | http://localhost:8002/dashboard-a2c15af64b97e73f.html |
-| **Production** | https://dr-electrique-rapport.netlify.app |
+| **Production**      | https://dr-electrique-rapport.netlify.app             |
 
 ## 📊 Database Schema
 
 ### `rapports` Table
+
 ```sql
 - id (UUID primary key)
 - created_at (timestamp)
@@ -115,6 +121,7 @@ NETLIFY_AUTH_TOKEN=your-token
 ```
 
 ### `photos` Table
+
 ```sql
 - id (UUID)
 - rapport_id (UUID foreign key)
@@ -128,6 +135,7 @@ NETLIFY_AUTH_TOKEN=your-token
 ## 🎯 API Integration
 
 ### Supabase Client
+
 ```javascript
 const SUPABASE_URL = 'https://iawsshgkogntmdzrfjyw.supabase.co';
 const SUPABASE_ANON_KEY = 'your_anon_key';
@@ -135,7 +143,9 @@ const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 ```
 
 ### Claude Vision API
+
 Material detection using image analysis:
+
 ```javascript
 fetch("https://api.anthropic.com/v1/messages", {
     headers: { "x-api-key": "sk-ant-api03-xxxxx" },
@@ -152,29 +162,34 @@ fetch("https://api.anthropic.com/v1/messages", {
 ## 🚀 Deployment to Netlify
 
 ### Method 1: GitHub Integration
+
 1. Push to GitHub
 2. Connect repo to Netlify
 3. Auto-deploys on push
 
 ### Method 2: CLI Deployment
+
 ```bash
 npm install -g netlify-cli
 netlify deploy --prod
 ```
 
 ### Method 3: Drag & Drop
+
 - Go to Netlify.com
 - Drag folder to deploy zone
 
 ## 🧪 Testing
 
 ### Manual Testing
+
 1. **Employee Form**: Fill out report and submit
 2. **Dashboard**: Check if report appears in real-time
 3. **Claude Vision**: Upload material photo for AI detection
 4. **Offline Mode**: Disable network and submit - should save to localStorage
 
 ### API Testing
+
 ```bash
 # Check Supabase connection
 curl -X GET "https://iawsshgkogntmdzrfjyw.supabase.co/rest/v1/rapports?limit=5" \
@@ -200,6 +215,7 @@ curl -X GET "https://iawsshgkogntmdzrfjyw.supabase.co/rest/v1/rapports?limit=5" 
 ## 📞 Support
 
 For issues or questions:
+
 - Check browser console (F12) for errors
 - Verify Supabase credentials
 - Check Netlify deployment logs

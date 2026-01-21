@@ -1,0 +1,65 @@
+# Claude Code Progress Tracker
+# Last Updated: 2026-01-20
+
+## Current Task
+Fix photo upload to Supabase Storage
+
+## Status
+IN_PROGRESS - Step 1 of 4
+
+## Completed Steps
+[x] Project analysis and understanding
+[x] Created CLAUDE.md with implementation guide
+[x] Created claude-progress.txt (this file)
+[x] Created slash commands for resuming work
+
+## Next Steps
+[ ] Step 1: Verify Supabase Storage bucket exists
+    - Go to Supabase Dashboard > Storage
+    - Check if 'photos' bucket exists
+    - If not, create it with public access
+
+[ ] Step 2: Verify photos table exists
+    - Go to Supabase Dashboard > Table Editor
+    - Check if 'photos' table exists
+    - If not, run SQL from CLAUDE.md
+
+[ ] Step 3: Add uploadPhotoToStorage function to index.html
+    - Add after line ~190 (after sendEmailBackup)
+    - See CLAUDE.md for exact code
+
+[ ] Step 4: Modify submitRapport to upload photos
+    - Find submitRapport function (~line 320)
+    - After successful rapport insert, call uploadAllPhotos
+    - See CLAUDE.md for exact changes
+
+[ ] Step 5: Test the implementation
+    - Run npm run dev
+    - Submit a report with photos
+    - Verify photos appear in Supabase Storage
+
+[ ] Step 6: Update dashboard to display photos
+    - Fetch photos from photos table
+    - Display images from Storage URLs
+
+## Blockers
+None currently
+
+## Notes
+- Photos are currently base64 encoded in memory
+- Form works, photos display correctly
+- Issue is photos not persisting after submit
+- Need to upload to Supabase Storage bucket
+
+## Files to Modify
+1. index.html - Add photo upload functions
+2. dashboard-a2c15af64b97e73f.html - Display photos from Storage (later)
+
+## Supabase Project
+- URL: https://iawsshgkogntmdzrfjyw.supabase.co
+- Dashboard: https://supabase.com/dashboard/project/iawsshgkogntmdzrfjyw
+
+## Quick Commands
+npm run dev       # Start local server
+/continue         # Resume from this file
+/fix-photos       # Run photo upload implementation

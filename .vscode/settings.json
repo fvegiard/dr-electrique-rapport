@@ -13,12 +13,67 @@
       "editor.defaultFormatter": "esbenp.prettier-vscode",
       "editor.formatOnSave": true
     },
+    "[javascript]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "editor.formatOnSave": true
+    },
+    "[typescript]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "editor.formatOnSave": true
+    },
+    "[javascriptreact]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "editor.formatOnSave": true
+    },
+    "[typescriptreact]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "editor.formatOnSave": true
+    },
     "files.exclude": {
       "**/__pycache__": true,
       "**/.pytest_cache": true,
       "**/node_modules": true,
-      "**/.venv": true
-    }
+      "**/.venv": true,
+      "**/dist": true,
+      "**/.cursor": true
+    },
+    // Agentic Mode Performance Optimizations
+    "editor.inlineSuggest.enabled": true,
+    "editor.suggest.preview": true,
+    "editor.quickSuggestions": {
+      "other": "on",
+      "comments": "on",
+      "strings": "on"
+    },
+    "editor.codeActionsOnSave": {
+      "source.fixAll.eslint": "explicit",
+      "source.organizeImports": "explicit"
+    },
+    // Image & Visual Capabilities
+    "editor.imagePreview.enabled": true,
+    "editor.imagePreview.maxSize": 10485760,
+    "mcp.imageProcessing.enabled": true,
+    "mcp.visionAnalysis.enabled": true,
+    // Web Navigation
+    "mcp.webNavigation.enabled": true,
+    "mcp.browserAutomation.enabled": true,
+    "mcp.webScraping.enabled": true,
+    // Agent Skills & Context
+    "chat.useAgentSkills": true,
+    "claudeCode.context.webEnabled": true,
+    "claudeCode.context.imageEnabled": true,
+    // File Watching for Autonomous Operations
+    "files.watcherExclude": {
+      "**/node_modules/**": true,
+      "**/.git/**": true,
+      "**/dist/**": true,
+      "**/__pycache__/**": true,
+      "**/.cursor/**": true
+    },
+    // TypeScript/JavaScript Optimizations
+    "typescript.preferences.preferTypeOnlyAutoImports": true,
+    "javascript.preferences.preferTypeOnlyAutoImports": true,
+    "typescript.preferences.includePackageJsonAutoImports": "auto"
   },
   "extensions": {
     "recommendations": [
@@ -27,7 +82,10 @@
       "ms-vscode.vscode-typescript-react-extension",
       "bradlc.vscode-tailwindcss",
       "ms-python.python",
-      "ms-python.vscode-pylance"
+      "ms-python.vscode-pylance",
+      "ms-vscode.vscode-json",
+      "formulahendry.auto-rename-tag",
+      "christian-kohler.path-intellisense"
     ]
   },
   "launch": {
@@ -35,6 +93,15 @@
     "configurations": [
       {
         "name": "Open Local Server",
+        "type": "node",
+        "request": "launch",
+        "program": "${workspaceFolder}/node_modules/.bin/vite",
+        "args": ["--host"],
+        "console": "integratedTerminal",
+        "skipFiles": ["<node_internals>/**"]
+      },
+      {
+        "name": "Open Local Server (Python)",
         "type": "python",
         "request": "launch",
         "program": "-m",
@@ -44,10 +111,39 @@
       }
     ]
   },
+  // MCP Servers Configuration
+  "mcpServers": {
+    "images": {
+      "command": "npx",
+      "args": ["mcp-image-extractor"]
+    },
+    "chrome-devtools": {
+      "command": "npx",
+      "args": ["chrome-devtools-mcp"]
+    },
+    "mcp-router": {
+      "command": "node",
+      "args": ["mcp-router-server.js"],
+      "cwd": "${workspaceFolder}"
+    }
+  },
+  // Advanced Agentic Mode Settings (2026)
   "claudeCode.allowDangerouslySkipPermissions": true,
   "claudeCode.initialPermissionMode": "bypassPermissions",
+  "claudeCode.agentMode": "autonomous",
   "editor.defaultFormatter": "Anthropic.claude-code",
   "notebook.defaultFormatter": "Anthropic.claude-code",
   "chat.useAgentSkills": true,
-  "github.copilot.chat.anthropic.tools.websearch.enabled": true
+  "github.copilot.chat.anthropic.tools.websearch.enabled": true,
+  "github.copilot.chat.anthropic.tools.terminal.enabled": true,
+  // 2026 Cursor AI Features
+  "cursor.ai.contextWindow": "large",
+  "cursor.ai.model": "claude-3.5-sonnet-20241022",
+  "cursor.ai.temperature": 0.7,
+  "cursor.ai.maxTokens": 4096,
+  "cursor.multiModal.enabled": true,
+  "cursor.vision.enabled": true,
+  "cursor.webIntegration.enabled": true,
+  "cursor.agenticMode.persistence": true,
+  "cursor.agenticMode.continuation": true
 }

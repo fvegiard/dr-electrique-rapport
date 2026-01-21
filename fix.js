@@ -5,9 +5,9 @@
 // if (supabaseResult.status === 'rejected' || supabaseResult.value.error) {
 
 // NOUVEAU CODE (correct):
-// const hasSupabaseError = supabaseResult.status === 'rejected' || 
+// const hasSupabaseError = supabaseResult.status === 'rejected' ||
 //     (supabaseResult.value.error && Object.keys(supabaseResult.value.error).length > 0);
 // if (hasSupabaseError) {
 
-// Le problème: supabaseResult.value.error peut être {} (objet vide) 
+// Le problème: supabaseResult.value.error peut être {} (objet vide)
 // qui est truthy en JavaScript mais n'est pas une vraie erreur

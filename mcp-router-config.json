@@ -1,0 +1,95 @@
+{
+  "version": "1.0.0",
+  "name": "Electrical Engineering MCP Router",
+  "description": "Intelligent router for electrical engineering tasks with image analysis and web navigation",
+
+  "servers": {
+    "image-processor": {
+      "name": "Image Analysis Server",
+      "description": "Handles image processing, OCR, and visual analysis for electrical diagrams",
+      "command": "npx",
+      "args": ["mcp-image-extractor"],
+      "capabilities": ["image_processing", "ocr", "visual_analysis"],
+      "keywords": ["image", "photo", "diagram", "ocr", "visual", "inspection"]
+    },
+
+    "web-navigator": {
+      "name": "Web Navigation Server",
+      "description": "Handles web browsing, research, and code/standards lookup",
+      "command": "npx",
+      "args": ["chrome-devtools-mcp"],
+      "capabilities": ["web_navigation", "research", "standards_lookup"],
+      "keywords": ["web", "browse", "research", "standards", "nec", "nfpa", "csa", "code"]
+    },
+
+    "context7-research": {
+      "name": "Documentation Research Server",
+      "description": "Provides access to up-to-date documentation and code examples",
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp"],
+      "capabilities": ["documentation", "code_examples", "research"],
+      "keywords": ["docs", "documentation", "examples", "research", "code"]
+    }
+  },
+
+  "routing_rules": {
+    "image_analysis": {
+      "patterns": [
+        "analyze.*image",
+        "process.*photo",
+        "ocr.*text",
+        "diagram.*analysis",
+        "visual.*inspection",
+        "electrical.*diagram",
+        "wiring.*schematic"
+      ],
+      "server": "image-processor",
+      "confidence": 0.9
+    },
+
+    "web_research": {
+      "patterns": [
+        "research.*standard",
+        "check.*code",
+        "find.*requirement",
+        "browse.*web",
+        "lookup.*nfpa",
+        "lookup.*nec",
+        "lookup.*csa",
+        "electrical.*code",
+        "permit.*requirement"
+      ],
+      "server": "web-navigator",
+      "confidence": 0.85
+    },
+
+    "documentation": {
+      "patterns": [
+        "documentation.*for",
+        "code.*example",
+        "how.*to.*implement",
+        "api.*documentation",
+        "library.*docs",
+        "framework.*guide"
+      ],
+      "server": "context7-research",
+      "confidence": 0.8
+    }
+  },
+
+  "fallback_strategy": "ask_user",
+  "multi_server_support": true,
+  "intelligent_routing": true,
+
+  "electrical_domain": {
+    "standards": ["NEC", "NFPA", "CSA", "IEC"],
+    "specializations": [
+      "residential_electrical",
+      "commercial_installations",
+      "industrial_systems",
+      "renewable_energy",
+      "safety_compliance",
+      "inspection_reports"
+    ]
+  }
+}

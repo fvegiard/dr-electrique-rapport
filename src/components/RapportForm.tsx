@@ -9,6 +9,7 @@ import MaterialScanner from './form/MaterialScanner';
 import { supabase } from '../services/supabase';
 import { EMPLOYES, WORKERS_NAMES, PROJETS, MATERIAUX_COMMUNS, LOCAL_STORAGE_KEY } from '../utils/constants';
 import { DailyReport, Material } from '../types';
+import { uploadPhotosWithRetry } from '../lib/photoTransaction';
 
 const RapportForm: React.FC = () => {
   const getTodayStr = () => new Date().toISOString().split('T')[0];
@@ -80,7 +81,7 @@ const RapportForm: React.FC = () => {
       confidence: material.confidence,
       ...material
     };
-    update('materiaux', [...data.materiaux, newMaterial]);
+    update('materiaux', [...(data.materiaux || []), newMaterial]);
   };
 
   const savePendingRapport = (rapport: DailyReport) => {
@@ -104,7 +105,7 @@ const RapportForm: React.FC = () => {
     setStep('submitting');
 
     // Calculate totals
-    const totalHeuresMO = data.mainOeuvre.reduce((acc, m) => {
+    const totalHeuresMO = (data.mainOeuvre || []).reduce((acc, m) => {
       if (!m.employe && !m.heureDebut) return acc;
       return acc + calculateHours(m.heureDebut, m.heureFin);
     }, 0);
@@ -114,12 +115,12 @@ const RapportForm: React.FC = () => {
       // Add computed fields
       total_heures_mo: totalHeuresMO,
       total_photos:
-        data.photosGenerales.length +
-        data.photosAvant.length +
-        data.photosApres.length +
-        data.photosProblemes.length,
-      has_extras: data.ordresTravail.some(o => o.isExtra),
-      total_extras: data.ordresTravail
+        (data.photosGenerales || []).length +
+        (data.photosAvant || []).length +
+        (data.photosApres || []).length +
+        (data.photosProblemes || []).length,
+      has_extras: (data.ordresTravail || []).some(o => o.isExtra),
+      total_extras: (data.ordresTravail || [])
         .filter(o => o.isExtra)
         .reduce((acc, o) => acc + (parseFloat(o.montantExtra) || 0), 0),
       
@@ -129,17 +130,17 @@ const RapportForm: React.FC = () => {
       redacteur: data.redacteur,
       projet: data.projet,
       // Mapping Photos to ensure URL presence
-      photos_generales: data.photosGenerales.map(p => ({
-         id: p.id, url: p.storageUrl || p.data, timestamp: p.timestamp, gps: p.geolocation 
+      photos_generales: (data.photosGenerales || []).map(p => ({
+         id: p.id, url: p.storageUrl || p.data, timestamp: p.timestamp, gps: p.geolocation
       })),
-      photos_avant: data.photosAvant.map(p => ({
-         id: p.id, url: p.storageUrl || p.data, timestamp: p.timestamp, gps: p.geolocation 
+      photos_avant: (data.photosAvant || []).map(p => ({
+         id: p.id, url: p.storageUrl || p.data, timestamp: p.timestamp, gps: p.geolocation
       })),
-      photos_apres: data.photosApres.map(p => ({
-         id: p.id, url: p.storageUrl || p.data, timestamp: p.timestamp, gps: p.geolocation 
+      photos_apres: (data.photosApres || []).map(p => ({
+         id: p.id, url: p.storageUrl || p.data, timestamp: p.timestamp, gps: p.geolocation
       })),
-      photos_problemes: data.photosProblemes.map(p => ({
-         id: p.id, url: p.storageUrl || p.data, timestamp: p.timestamp, gps: p.geolocation 
+      photos_problemes: (data.photosProblemes || []).map(p => ({
+         id: p.id, url: p.storageUrl || p.data, timestamp: p.timestamp, gps: p.geolocation
       })),
       
       // Other arrays
@@ -165,35 +166,26 @@ const RapportForm: React.FC = () => {
       
       console.log('Rapport submitted:', result);
       
-      // 2. INSERT photos into photos table (for dashboard queries)
+      // 2. INSERT photos into photos table with retry logic
       const rapportId = result?.[0]?.id;
       if (rapportId) {
-        const allPhotos = [
-          ...data.photosGenerales.map(p => ({ ...p, category: 'GENERAL' })),
-          ...data.photosAvant.map(p => ({ ...p, category: 'AVANT' })),
-          ...data.photosApres.map(p => ({ ...p, category: 'APRES' })),
-          ...data.photosProblemes.map(p => ({ ...p, category: 'PROBLEME' })),
+        const photoGroups = [
+          { category: 'GENERAL', items: data.photosGenerales || [] },
+          { category: 'AVANT', items: data.photosAvant || [] },
+          { category: 'APRES', items: data.photosApres || [] },
+          { category: 'PROBLEME', items: data.photosProblemes || [] },
         ];
 
-        if (allPhotos.length > 0) {
-          const photosToInsert = allPhotos.map(photo => ({
-            rapport_id: rapportId,
-            category: photo.category,
-            url: photo.storageUrl || photo.data,
-            latitude: photo.geolocation?.latitude || null,
-            longitude: photo.geolocation?.longitude || null,
-            gps_accuracy: photo.geolocation?.accuracy || null,
-          }));
+        const hasPhotos = photoGroups.some(g => g.items.length > 0);
 
-          const { error: photosError } = await supabase
-            .from('photos')
-            .insert(photosToInsert);
+        if (hasPhotos) {
+          const photoResult = await uploadPhotosWithRetry(photoGroups, rapportId, supabase);
 
-          if (photosError) {
-            console.error('Photos insert error (non-blocking):', photosError);
-            // Non-blocking: rapport is saved, photos in JSON backup
+          if (photoResult.success) {
+            console.log(`[PhotoTransaction] ${photoResult.insertedCount} photos inserted successfully`);
           } else {
-            console.log(`${photosToInsert.length} photos inserted into photos table`);
+            console.error('[PhotoTransaction] Failed after retries:', photoResult.errors);
+            // Non-blocking: rapport is saved, photos in JSON backup within rapports table
           }
         }
       }
@@ -369,13 +361,13 @@ const RapportForm: React.FC = () => {
         {/* MAIN D'OEUVRE */}
         <Section icon={Icons.clock} title="TEMPS - MAIN D'OEUVRE" subtitle='Heures début/fin' color='#3b82f6'>
           <div className='space-y-4'>
-            {data.mainOeuvre.map((row, idx) => (
+            {(data.mainOeuvre || []).map((row, idx) => (
               <div key={row.id} className='bg-black/20 rounded-xl p-3 space-y-3 animate-slide-up'>
                 <div className='flex items-center justify-between'>
                   <select
                     value={row.employe}
                     onChange={e => {
-                      const updated = [...data.mainOeuvre];
+                      const updated = [...(data.mainOeuvre || [])];
                       updated[idx].employe = e.target.value;
                       update('mainOeuvre', updated);
                     }}
@@ -389,8 +381,8 @@ const RapportForm: React.FC = () => {
                   <button
                     type='button'
                     onClick={() => {
-                      if (data.mainOeuvre.length > 1) {
-                        update('mainOeuvre', data.mainOeuvre.filter(r => r.id !== row.id));
+                      if ((data.mainOeuvre || []).length > 1) {
+                        update('mainOeuvre', (data.mainOeuvre || []).filter(r => r.id !== row.id));
                       }
                     }}
                     className='p-2 text-gray-600 hover:text-red-500'
@@ -403,7 +395,7 @@ const RapportForm: React.FC = () => {
                   <TimePicker
                     value={row.heureDebut}
                     onChange={val => {
-                      const updated = [...data.mainOeuvre];
+                      const updated = [...(data.mainOeuvre || [])];
                       updated[idx].heureDebut = val;
                       update('mainOeuvre', updated);
                     }}
@@ -413,7 +405,7 @@ const RapportForm: React.FC = () => {
                   <TimePicker
                     value={row.heureFin}
                     onChange={val => {
-                      const updated = [...data.mainOeuvre];
+                      const updated = [...(data.mainOeuvre || [])];
                       updated[idx].heureFin = val;
                       update('mainOeuvre', updated);
                     }}
@@ -424,7 +416,7 @@ const RapportForm: React.FC = () => {
             ))}
             <button
               type='button'
-              onClick={() => update('mainOeuvre', [...data.mainOeuvre, { id: generateId(), employe: '', heureDebut: '06:00', heureFin: '14:15', description: '' }])}
+              onClick={() => update('mainOeuvre', [...(data.mainOeuvre || []), { id: generateId(), employe: '', heureDebut: '06:00', heureFin: '14:15', description: '' }])}
               className='w-full py-3 border-2 border-dashed border-blue-500/40 rounded-xl text-blue-500 flex items-center justify-center gap-2 text-sm font-medium'
             >
               {Icons.plus} Ajouter employé
@@ -457,7 +449,7 @@ const RapportForm: React.FC = () => {
           <div className='space-y-6'>
             <PhotoUploadGPS
               photos={data.photosGenerales}
-              setPhotos={val => update('photosGenerales', typeof val === 'function' ? val(data.photosGenerales) : val)}
+              setPhotos={val => update('photosGenerales', typeof val === 'function' ? val(data.photosGenerales || []) : val)}
               label='GÉNÉRALES'
               category='general'
               projectId={data.projet}
@@ -465,7 +457,7 @@ const RapportForm: React.FC = () => {
             />
             <PhotoUploadGPS
               photos={data.photosAvant}
-              setPhotos={val => update('photosAvant', typeof val === 'function' ? val(data.photosAvant) : val)}
+              setPhotos={val => update('photosAvant', typeof val === 'function' ? val(data.photosAvant || []) : val)}
               label='AVANT'
               category='avant'
               projectId={data.projet}
@@ -474,7 +466,7 @@ const RapportForm: React.FC = () => {
             />
             <PhotoUploadGPS
               photos={data.photosApres}
-              setPhotos={val => update('photosApres', typeof val === 'function' ? val(data.photosApres) : val)}
+              setPhotos={val => update('photosApres', typeof val === 'function' ? val(data.photosApres || []) : val)}
               label='APRÈS'
               category='apres'
               projectId={data.projet}
@@ -483,7 +475,7 @@ const RapportForm: React.FC = () => {
             />
              <PhotoUploadGPS
               photos={data.photosProblemes}
-              setPhotos={val => update('photosProblemes', typeof val === 'function' ? val(data.photosProblemes) : val)}
+              setPhotos={val => update('photosProblemes', typeof val === 'function' ? val(data.photosProblemes || []) : val)}
               label='PROBLÈMES'
               category='problemes'
               projectId={data.projet}

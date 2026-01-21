@@ -650,44 +650,101 @@
             );
         };
         
-        // FIX: PhotosView - handle missing images gracefully
+        // 2026 Best Practices: PhotosView with improved error handling and normalization
+        const normalizePhotoData = (photo) => {
+            if (typeof photo === 'string') {
+                return { data: photo, id: Date.now().toString(36) };
+            }
+            return {
+                id: photo.id || Date.now().toString(36) + Math.random().toString(36).substr(2, 5),
+                data: photo.data || photo.url || '',
+                geolocation: photo.geolocation || { latitude: null, longitude: null, enabled: false },
+                timestamp: photo.timestamp || null,
+                originalName: photo.originalName || null
+            };
+        };
+
         const PhotosView = ({ rapports, selectedDate }) => {
-            const allPhotos = rapports.filter(r => r.date === selectedDate).flatMap(r => {
-                const photos = [];
-                (r.photosGenerales || []).forEach(p => photos.push({ ...(typeof p === 'object' ? p : {data: p}), type: 'Generale', redacteur: r.redacteur }));
-                (r.photosAvant || []).forEach(p => photos.push({ ...(typeof p === 'object' ? p : {data: p}), type: 'Avant', redacteur: r.redacteur }));
-                (r.photosApres || []).forEach(p => photos.push({ ...(typeof p === 'object' ? p : {data: p}), type: 'Apres', redacteur: r.redacteur }));
-                (r.photosProblemes || []).forEach(p => photos.push({ ...(typeof p === 'object' ? p : {data: p}), type: 'Probleme', redacteur: r.redacteur }));
-                return photos;
-            });
-            
+            const [loadErrors, setLoadErrors] = React.useState({});
+            const [selectedPhoto, setSelectedPhoto] = React.useState(null);
+
+            const allPhotos = React.useMemo(() => {
+                return rapports.filter(r => r.date === selectedDate).flatMap(r => {
+                    const photos = [];
+                    const addPhotos = (arr, type) => {
+                        (Array.isArray(arr) ? arr : []).forEach(p => {
+                            const normalized = normalizePhotoData(p);
+                            photos.push({
+                                ...normalized,
+                                type,
+                                redacteur: r.redacteur,
+                                reportDate: r.date,
+                                projet: r.projetNom || r.projet
+                            });
+                        });
+                    };
+                    addPhotos(r.photosGenerales, 'Generale');
+                    addPhotos(r.photosAvant, 'Avant');
+                    addPhotos(r.photosApres, 'Apres');
+                    addPhotos(r.photosProblemes, 'Probleme');
+                    return photos;
+                });
+            }, [rapports, selectedDate]);
+
+            const handleImageError = (photoId) => {
+                setLoadErrors(prev => ({ ...prev, [photoId]: true }));
+                console.warn(`Photo load failed: ${photoId}`);
+            };
+
+            const typeColors = {
+                'Generale': 'bg-purple-500',
+                'Avant': 'bg-blue-500',
+                'Apres': 'bg-green-500',
+                'Probleme': 'bg-red-500'
+            };
+
             return (
                 <div className="animate-fade">
-                    <div className="section-title">PHOTOS ({allPhotos.length})</div>
+                    <div className="section-title flex items-center justify-between">
+                        <span>PHOTOS ({allPhotos.length})</span>
+                        {Object.keys(loadErrors).length > 0 && (
+                            <span className="text-xs text-orange-400">
+                                {Object.keys(loadErrors).length} erreur(s) de chargement
+                            </span>
+                        )}
+                    </div>
                     {allPhotos.length === 0 ? (
-                        <div className="text-center py-16 text-gray-500"><div className="text-4xl mb-4">📷</div>Aucune photo</div>
+                        <div className="text-center py-16 text-gray-500">
+                            <div className="text-4xl mb-4">📷</div>
+                            Aucune photo pour cette date
+                        </div>
                     ) : (
                         <div className="photo-grid grid grid-cols-4 md:grid-cols-6 gap-4">
-                            {allPhotos.map((photo, i) => (
-                                <div key={i} className="relative group">
-                                    {photo.data ? (
-                                        <img 
-                                            src={photo.data} 
-                                            alt="" 
-                                            className="w-full aspect-square object-cover rounded-lg cursor-pointer"
-                                            onError={(e) => {
-                                                e.target.style.display = 'none';
-                                                e.target.nextSibling.style.display = 'flex';
-                                            }}
+                            {allPhotos.map((photo) => (
+                                <div
+                                    key={photo.id}
+                                    className="relative group cursor-pointer"
+                                    onClick={() => setSelectedPhoto(photo)}
+                                >
+                                    {photo.data && !loadErrors[photo.id] ? (
+                                        <img
+                                            src={photo.data}
+                                            alt={`${photo.type} - ${photo.redacteur}`}
+                                            loading="lazy"
+                                            className="w-full aspect-square object-cover rounded-lg transition-transform group-hover:scale-105"
+                                            onError={() => handleImageError(photo.id)}
                                         />
-                                    ) : null}
-                                    <div className={`photo-placeholder ${photo.data ? 'hidden' : ''}`}>
-                                        {Icons.image}
-                                        <span className="text-xs mt-1">{photo.type}</span>
-                                    </div>
-                                    <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex flex-col items-center justify-center text-xs">
-                                        <span className="text-white">{photo.redacteur}</span>
-                                        <span className={`px-2 py-0.5 rounded mt-1 ${photo.type === 'Probleme' ? 'bg-red-500' : 'bg-purple-500'}`}>{photo.type}</span>
+                                    ) : (
+                                        <div className="photo-placeholder w-full aspect-square flex flex-col items-center justify-center bg-gray-800/50 rounded-lg border border-gray-700">
+                                            {Icons.image}
+                                            <span className="text-xs mt-1 text-gray-500">{photo.type}</span>
+                                        </div>
+                                    )}
+                                    <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex flex-col items-center justify-center text-xs pointer-events-none">
+                                        <span className="text-white font-medium">{photo.redacteur}</span>
+                                        <span className={`px-2 py-0.5 rounded mt-1 ${typeColors[photo.type] || 'bg-gray-500'}`}>
+                                            {photo.type}
+                                        </span>
                                         {photo.geolocation?.latitude && (
                                             <span className="flex items-center gap-1 mt-1 text-green-400">
                                                 {Icons.mapPin} GPS
@@ -696,6 +753,46 @@
                                     </div>
                                 </div>
                             ))}
+                        </div>
+                    )}
+
+                    {/* Photo Modal/Lightbox */}
+                    {selectedPhoto && (
+                        <div
+                            className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
+                            onClick={() => setSelectedPhoto(null)}
+                        >
+                            <div className="relative max-w-4xl max-h-[90vh]" onClick={e => e.stopPropagation()}>
+                                <img
+                                    src={selectedPhoto.data}
+                                    alt=""
+                                    className="max-w-full max-h-[80vh] object-contain rounded-lg"
+                                />
+                                <div className="absolute bottom-0 left-0 right-0 bg-black/80 p-4 rounded-b-lg">
+                                    <div className="flex items-center justify-between text-sm">
+                                        <div>
+                                            <span className="text-white font-medium">{selectedPhoto.redacteur}</span>
+                                            <span className={`ml-2 px-2 py-0.5 rounded ${typeColors[selectedPhoto.type]}`}>
+                                                {selectedPhoto.type}
+                                            </span>
+                                        </div>
+                                        <div className="text-gray-400">
+                                            {selectedPhoto.geolocation?.latitude && (
+                                                <span className="text-green-400 mr-4">
+                                                    📍 {selectedPhoto.geolocation.latitude.toFixed(4)}, {selectedPhoto.geolocation.longitude.toFixed(4)}
+                                                </span>
+                                            )}
+                                            {selectedPhoto.timestamp && new Date(selectedPhoto.timestamp).toLocaleString('fr-CA')}
+                                        </div>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setSelectedPhoto(null)}
+                                    className="absolute top-4 right-4 w-10 h-10 bg-black/50 rounded-full flex items-center justify-center text-white text-2xl hover:bg-black/70"
+                                >
+                                    ×
+                                </button>
+                            </div>
                         </div>
                     )}
                 </div>

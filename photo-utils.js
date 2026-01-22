@@ -84,12 +84,12 @@ window.compressImage = async function(file, options = {}) {
               canvas.toBlob(
                 (smallerBlob) => {
                   resolve({
-                    blob: smallerBlob || blob,
+                    blob: smallerBlob || blobh
                     width,
                     height,
                     originalSize: file.size,
                     compressedSize: (smallerBlob || blob).size,
-                    compressionRatio: ((1 - (smallerBlob || blob).size / file.size) * 100).toFixed(1)
+                    compressionRatio: Number(((1 - (smallerBlob || blob).size / file.size) * 100).toFixed(1))
                   });
                 },
                 'image/jpeg',
@@ -102,7 +102,7 @@ window.compressImage = async function(file, options = {}) {
                 height,
                 originalSize: file.size,
                 compressedSize: blob.size,
-                compressionRatio: ((1 - blob.size / file.size) * 100).toFixed(1)
+                compressionRatio: Number(((1 - blob.size / file.size) * 100).toFixed(1))
               });
             }
           },

@@ -24,7 +24,7 @@ interface CompressedImage {
   height: number;
   originalSize: number;
   compressedSize: number;
-  compressionRatio: string;
+  compressionRatio: number;
 }
 
 // ============== COMPRESSION ==============
@@ -104,7 +104,7 @@ export const compressImage = async (file: File, options: CompressionOptions = {}
                     height,
                     originalSize: file.size,
                     compressedSize: (smallerBlob || blob).size,
-                    compressionRatio: ((1 - (smallerBlob || blob).size / file.size) * 100).toFixed(1)
+                    compressionRatio: Number(((1 - (smallerBlob || blob).size / file.size) * 100).toFixed(1)
                   });
                 },
                 'image/jpeg',
@@ -117,7 +117,7 @@ export const compressImage = async (file: File, options: CompressionOptions = {}
                 height,
                 originalSize: file.size,
                 compressedSize: blob.size,
-                compressionRatio: ((1 - blob.size / file.size) * 100).toFixed(1)
+                compressionRatio: Number(((1 - blob.size / file.size) * 100).toFixed(1)
               });
             }
           },

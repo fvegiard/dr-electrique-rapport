@@ -38,7 +38,7 @@ const MaterialScanner: React.FC<MaterialScannerProps> = ({ onMaterialDetected })
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'claude-3-sonnet-20240229', // Updated model name if needed
+            model: 'claude-3-5-haiku-20241022', // Updated model name if needed
             max_tokens: 500,
             messages: [
               {

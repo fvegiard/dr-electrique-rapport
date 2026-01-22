@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Icons } from './ui/Icons';
 import Header from './ui/Header';
 import Section from './ui/Section';
@@ -8,7 +8,7 @@ import PhotoUploadGPS from './form/PhotoUploadGPS';
 import MaterialScanner from './form/MaterialScanner';
 import { supabase } from '../services/supabase';
 import { EMPLOYES, WORKERS_NAMES, PROJETS, MATERIAUX_COMMUNS, LOCAL_STORAGE_KEY } from '../utils/constants';
-import { DailyReport, Material } from '../types';
+import { DailyReport, Material, Photo } from '../types';
 import { uploadPhotosWithRetry } from '../lib/photoTransaction';
 
 const RapportForm: React.FC = () => {
@@ -59,6 +59,36 @@ const RapportForm: React.FC = () => {
     notesGenerales: '',
   });
 
+  // ============== FIX STALE CLOSURE: useRef pour photos ==============
+  // Ces refs maintiennent toujours la valeur la plus récente des photos
+  // pour éviter le problème de "stale closure" lors du submit
+  const photosGeneralesRef = useRef<Photo[]>([]);
+  const photosAvantRef = useRef<Photo[]>([]);
+  const photosApresRef = useRef<Photo[]>([]);
+  const photosProblemeRef = useRef<Photo[]>([]);
+
+  // Synchroniser les refs avec le state à chaque mise à jour
+  useEffect(() => {
+    photosGeneralesRef.current = data.photosGenerales || [];
+    console.log('[Ref Sync] photosGenerales:', photosGeneralesRef.current.length);
+  }, [data.photosGenerales]);
+
+  useEffect(() => {
+    photosAvantRef.current = data.photosAvant || [];
+    console.log('[Ref Sync] photosAvant:', photosAvantRef.current.length);
+  }, [data.photosAvant]);
+
+  useEffect(() => {
+    photosApresRef.current = data.photosApres || [];
+    console.log('[Ref Sync] photosApres:', photosApresRef.current.length);
+  }, [data.photosApres]);
+
+  useEffect(() => {
+    photosProblemeRef.current = data.photosProblemes || [];
+    console.log('[Ref Sync] photosProblemes:', photosProblemeRef.current.length);
+  }, [data.photosProblemes]);
+  // ============== FIN FIX STALE CLOSURE ==============
+
   const update = (key: keyof DailyReport, val: any) => setData(prev => ({ ...prev, [key]: val }));
 
   // Helper to calculate hours
@@ -104,14 +134,18 @@ const RapportForm: React.FC = () => {
 
     setStep('submitting');
 
-    // Calculate totals
+    // ============== FIX BUG HEURES: Condition corrigée ==============
+    // AVANT: if (!m.employe && !m.heureDebut) - skip si PAS d'employé ET PAS d'heure
+    // APRÈS: if (!m.heureDebut || !m.heureFin) - skip seulement si heures manquantes
     const totalHeuresMO = (data.mainOeuvre || []).reduce((acc, m) => {
-      if (!m.employe && !m.heureDebut) return acc;
+      // Ne calculer que si on a les heures de début ET fin
+      if (!m.heureDebut || !m.heureFin) return acc;
       return acc + calculateHours(m.heureDebut, m.heureFin);
     }, 0);
+    // ============== FIN FIX BUG HEURES ==============
 
     // Helper function to map photos correctly
-    const mapPhotos = (photos: typeof data.photosGenerales) =>
+    const mapPhotos = (photos: Photo[]) =>
       (photos || [])
         .filter(p => p.storageUrl || p.preview)
         .map(p => ({
@@ -128,16 +162,23 @@ const RapportForm: React.FC = () => {
           metadata: p.metadata || null
         }));
 
-    // DEBUG: Log photos before submit
-    console.log('[Submit] Photos state:', {
-      generales: data.photosGenerales?.length || 0,
-      avant: data.photosAvant?.length || 0,
-      apres: data.photosApres?.length || 0,
-      problemes: data.photosProblemes?.length || 0,
-      sampleGeneral: data.photosGenerales?.[0]
+    // ============== UTILISER LES REFS AU LIEU DU STATE ==============
+    // Les refs contiennent toujours la valeur la plus récente (pas de stale closure)
+    const currentPhotosGenerales = photosGeneralesRef.current;
+    const currentPhotosAvant = photosAvantRef.current;
+    const currentPhotosApres = photosApresRef.current;
+    const currentPhotosProblemes = photosProblemeRef.current;
+
+    // DEBUG: Log photos from REFS (should always be current)
+    console.log('[Submit] Photos from REFS:', {
+      generales: currentPhotosGenerales.length,
+      avant: currentPhotosAvant.length,
+      apres: currentPhotosApres.length,
+      problemes: currentPhotosProblemes.length,
+      sampleGeneral: currentPhotosGenerales[0]
     });
 
-    // Build rapport object - EXPLICIT MAPPING (no spread)
+    // Build rapport object - USING REFS FOR PHOTOS
     const rapportForSubmit = {
       date: data.date,
       redacteur: data.redacteur,
@@ -157,28 +198,32 @@ const RapportForm: React.FC = () => {
       problemes_securite: data.problemesSecurite || null,
 
       total_heures_mo: totalHeuresMO,
+      // Calculer total_photos depuis les REFS
       total_photos:
-        (data.photosGenerales?.length || 0) +
-        (data.photosAvant?.length || 0) +
-        (data.photosApres?.length || 0) +
-        (data.photosProblemes?.length || 0),
+        currentPhotosGenerales.length +
+        currentPhotosAvant.length +
+        currentPhotosApres.length +
+        currentPhotosProblemes.length,
       has_extras: (data.ordresTravail || []).some(o => o.isExtra),
       total_extras: (data.ordresTravail || [])
         .filter(o => o.isExtra)
         .reduce((acc, o) => acc + (parseFloat(o.montantExtra) || 0), 0),
 
-      photos_generales: mapPhotos(data.photosGenerales || []),
-      photos_avant: mapPhotos(data.photosAvant || []),
-      photos_apres: mapPhotos(data.photosApres || []),
-      photos_problemes: mapPhotos(data.photosProblemes || [])
+      // Mapper les photos depuis les REFS (pas de stale closure!)
+      photos_generales: mapPhotos(currentPhotosGenerales),
+      photos_avant: mapPhotos(currentPhotosAvant),
+      photos_apres: mapPhotos(currentPhotosApres),
+      photos_problemes: mapPhotos(currentPhotosProblemes)
     };
 
     // DEBUG: Log final payload
-    console.log('[Submit] Rapport payload photos:', {
-      photos_generales: rapportForSubmit.photos_generales,
-      photos_avant: rapportForSubmit.photos_avant,
-      photos_apres: rapportForSubmit.photos_apres,
-      photos_problemes: rapportForSubmit.photos_problemes
+    console.log('[Submit] Rapport payload:', {
+      total_heures_mo: rapportForSubmit.total_heures_mo,
+      total_photos: rapportForSubmit.total_photos,
+      photos_generales_count: rapportForSubmit.photos_generales.length,
+      photos_avant_count: rapportForSubmit.photos_avant.length,
+      photos_apres_count: rapportForSubmit.photos_apres.length,
+      photos_problemes_count: rapportForSubmit.photos_problemes.length
     });
 
     try {
@@ -196,11 +241,12 @@ const RapportForm: React.FC = () => {
 
       const rapportId = result?.[0]?.id;
       if (rapportId) {
+        // Utiliser les REFS pour les photos aussi ici
         const photoGroups = [
-          { category: 'GENERAL', items: data.photosGenerales || [] },
-          { category: 'AVANT', items: data.photosAvant || [] },
-          { category: 'APRES', items: data.photosApres || [] },
-          { category: 'PROBLEME', items: data.photosProblemes || [] },
+          { category: 'GENERAL', items: currentPhotosGenerales },
+          { category: 'AVANT', items: currentPhotosAvant },
+          { category: 'APRES', items: currentPhotosApres },
+          { category: 'PROBLEME', items: currentPhotosProblemes },
         ];
 
         const hasPhotos = photoGroups.some(g => g.items.length > 0);
@@ -209,9 +255,9 @@ const RapportForm: React.FC = () => {
           const photoResult = await uploadPhotosWithRetry(photoGroups, rapportId, supabase);
 
           if (photoResult.success) {
-            console.log(`[Submit] ${photoResult.insertedCount} photos inserted`);
+            console.log(`[Submit] ${photoResult.insertedCount} photos inserted to photos table`);
           } else {
-            console.error('[Submit] Photo insert failed:', photoResult.errors);
+            console.error('[Submit] Photo insert to table failed:', photoResult.errors);
           }
         }
       }

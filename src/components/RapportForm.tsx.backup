@@ -521,13 +521,7 @@ const RapportForm: React.FC = () => {
           <div className='space-y-6'>
             <PhotoUploadGPS
               photos={data.photosGenerales}
-              setPhotos={val => {
-                if (typeof val === 'function') {
-                  setData(prev => ({ ...prev, photosGenerales: val(prev.photosGenerales || []) }));
-                } else {
-                  update('photosGenerales', val);
-                }
-              }}
+              setPhotos={val => update('photosGenerales', typeof val === 'function' ? val(data.photosGenerales || []) : val)}
               label='GÉNÉRALES'
               category='general'
               projectId={data.projet}
@@ -535,13 +529,7 @@ const RapportForm: React.FC = () => {
             />
             <PhotoUploadGPS
               photos={data.photosAvant}
-              setPhotos={val => {
-                if (typeof val === 'function') {
-                  setData(prev => ({ ...prev, photosAvant: val(prev.photosAvant || []) }));
-                } else {
-                  update('photosAvant', val);
-                }
-              }}
+              setPhotos={val => update('photosAvant', typeof val === 'function' ? val(data.photosAvant || []) : val)}
               label='AVANT'
               category='avant'
               projectId={data.projet}
@@ -550,13 +538,7 @@ const RapportForm: React.FC = () => {
             />
             <PhotoUploadGPS
               photos={data.photosApres}
-              setPhotos={val => {
-                if (typeof val === 'function') {
-                  setData(prev => ({ ...prev, photosApres: val(prev.photosApres || []) }));
-                } else {
-                  update('photosApres', val);
-                }
-              }}
+              setPhotos={val => update('photosApres', typeof val === 'function' ? val(data.photosApres || []) : val)}
               label='APRÈS'
               category='apres'
               projectId={data.projet}
@@ -565,13 +547,7 @@ const RapportForm: React.FC = () => {
             />
              <PhotoUploadGPS
               photos={data.photosProblemes}
-              setPhotos={val => {
-                if (typeof val === 'function') {
-                  setData(prev => ({ ...prev, photosProblemes: val(prev.photosProblemes || []) }));
-                } else {
-                  update('photosProblemes', val);
-                }
-              }}
+              setPhotos={val => update('photosProblemes', typeof val === 'function' ? val(data.photosProblemes || []) : val)}
               label='PROBLÈMES'
               category='problemes'
               projectId={data.projet}

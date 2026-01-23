@@ -57,9 +57,8 @@ export const MATERIAUX_COMMUNS: string[] = [
 ];
 
 export const SUPABASE_CONFIG = {
-  URL: 'https://iawsshgkogntmdzrfjyw.supabase.co',
-  // Note: In a real prod env, this should be in .env, but keeping consistent with existing code for now
-  ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlhd3NzaGdrb2dudG1kenJmanl3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc2NDkwMDUsImV4cCI6MjA4MzIyNTAwNX0.1BxhI5SWLL5786qsshidOMpTsOrGeNob6xpcKQjI4s4'
+  URL: import.meta.env.VITE_SUPABASE_URL || '',
+  ANON_KEY: import.meta.env.VITE_SUPABASE_ANON_KEY || ''
 };
 
 export const EMAILJS_CONFIG = {

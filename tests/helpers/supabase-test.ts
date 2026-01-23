@@ -5,8 +5,9 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
  * Provides utilities to verify DB records and Storage files in E2E tests
  */
 
-const SUPABASE_URL = 'https://iawsshgkogntmdzrfjyw.supabase.co';
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || '';
+const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || '';
+const SUPABASE_BUCKET = 'rapport-photos';
 
 let supabaseClient: SupabaseClient | null = null;
 
@@ -15,8 +16,8 @@ let supabaseClient: SupabaseClient | null = null;
  */
 export function getSupabaseClient(): SupabaseClient {
   if (!supabaseClient) {
-    if (!SUPABASE_ANON_KEY) {
-      throw new Error('SUPABASE_ANON_KEY environment variable is required for E2E tests');
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+      throw new Error('SUPABASE_URL and SUPABASE_ANON_KEY environment variables are required for E2E tests');
     }
     supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   }
@@ -87,16 +88,16 @@ export async function verifyPhotoCount(rapportId: string, expectedCount: number)
 /**
  * Verify photos exist in Storage bucket
  */
-export async function verifyPhotosInStorage(rapportId: string): Promise<{
+export async function verifyPhotosInStorage(storageRootId: string): Promise<{
   exists: boolean;
   files: string[];
 }> {
   const supabase = getSupabaseClient();
 
   // List files in the rapport's folder
-  const { data, error } = await supabase.storage
-    .from('photos')
-    .list(rapportId, {
+  const { error } = await supabase.storage
+    .from(SUPABASE_BUCKET)
+    .list(storageRootId, {
       limit: 100,
       offset: 0,
     });
@@ -112,14 +113,14 @@ export async function verifyPhotosInStorage(rapportId: string): Promise<{
 
   for (const category of categories) {
     const { data: categoryFiles, error: categoryError } = await supabase.storage
-      .from('photos')
-      .list(`${rapportId}/${category}`, {
+      .from(SUPABASE_BUCKET)
+      .list(`${storageRootId}/${category}`, {
         limit: 100,
         offset: 0,
       });
 
     if (!categoryError && categoryFiles) {
-      allFiles.push(...categoryFiles.map(f => `${rapportId}/${category}/${f.name}`));
+      allFiles.push(...categoryFiles.map(f => `${storageRootId}/${category}/${f.name}`));
     }
   }
 
@@ -159,19 +160,20 @@ export async function verifyPhotoUrlsAccessible(rapportId: string): Promise<bool
 /**
  * Clean up test data (call in afterAll or afterEach)
  */
-export async function cleanupTestRapport(rapportId: string): Promise<void> {
+export async function cleanupTestRapport(rapportId: string, storageRootId?: string): Promise<void> {
   const supabase = getSupabaseClient();
+  const storageRoot = storageRootId || rapportId;
 
   // Delete photos from storage first
   const categories = ['GENERAL', 'AVANT', 'APRES', 'PROBLEMES'];
   for (const category of categories) {
     const { data: files } = await supabase.storage
-      .from('photos')
-      .list(`${rapportId}/${category}`);
+      .from(SUPABASE_BUCKET)
+      .list(`${storageRoot}/${category}`);
 
     if (files && files.length > 0) {
-      const filePaths = files.map(f => `${rapportId}/${category}/${f.name}`);
-      await supabase.storage.from('photos').remove(filePaths);
+      const filePaths = files.map(f => `${storageRoot}/${category}/${f.name}`);
+      await supabase.storage.from(SUPABASE_BUCKET).remove(filePaths);
     }
   }
 

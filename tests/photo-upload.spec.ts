@@ -1,12 +1,13 @@
 import { test, expect } from '@playwright/test';
 import {
-  getMostRecentRapport,
   getPhotosForRapport,
-  verifyPhotoCount,
   verifyPhotosInStorage,
   cleanupTestRapport,
   waitForRapport
 } from './helpers/supabase-test';
+
+const hasSupabaseKey = Boolean(process.env.SUPABASE_ANON_KEY);
+const describeWithSupabase = hasSupabaseKey ? test.describe : test.describe.skip;
 
 /**
  * E2E Test: Photo Upload to Supabase Storage
@@ -20,16 +21,18 @@ import {
  * 6. Verify photos uploaded to Storage bucket
  */
 
-test.describe('Photo Upload E2E', () => {
+describeWithSupabase('Photo Upload E2E', () => {
   // Track created rapport ID for cleanup
   let testRapportId: string | null = null;
+  let testProjectId: string | null = null;
 
   test.afterEach(async () => {
     // Clean up test data after each test
     if (testRapportId) {
-      await cleanupTestRapport(testRapportId);
+      await cleanupTestRapport(testRapportId, testProjectId || undefined);
       testRapportId = null;
     }
+    testProjectId = null;
   });
 
   test('should submit rapport with 4 photos and verify DB + Storage', async ({ page }) => {
@@ -49,6 +52,9 @@ test.describe('Photo Upload E2E', () => {
     if (projectOptions.length > 1) {
       // Select first non-placeholder option
       await projectSelect.selectOption({ index: 1 });
+      testProjectId = await projectSelect.inputValue();
+    } else {
+      testProjectId = null;
     }
 
     // Fill date
@@ -72,8 +78,6 @@ test.describe('Photo Upload E2E', () => {
     // Helper to add photo via file input
     const addPhotoToCategory = async (categoryName: string) => {
       // Find the photo section for this category
-      const section = page.locator(`[data-category="${categoryName}"], .photo-section-${categoryName.toLowerCase()}`);
-
       // Look for file input or camera button
       const fileInput = page.locator(`input[type="file"][data-category="${categoryName}"]`).first();
 
@@ -175,7 +179,8 @@ test.describe('Photo Upload E2E', () => {
     }
 
     // ===== VERIFY STORAGE =====
-    const storageResult = await verifyPhotosInStorage(testRapportId);
+    const storageRoot = testProjectId || 'DEFAULT';
+    const storageResult = await verifyPhotosInStorage(storageRoot);
     console.log(`Storage verification: ${storageResult.files.length} files found`);
     console.log('Files:', storageResult.files);
 
@@ -252,7 +257,7 @@ test.describe('Photo Upload E2E', () => {
     await submitButton.click();
 
     // Should show some loading state
-    const loadingIndicator = page.locator('.loading, .spinner, [aria-busy="true"], button:disabled');
+    await page.locator('.loading, .spinner, [aria-busy="true"], button:disabled').count();
     // Note: This may need adjustment based on actual UI implementation
   });
 });
@@ -267,14 +272,6 @@ test.describe('Photo Categories', () => {
 
     for (const category of categories) {
       // Look for section, input, or button related to this category
-      const categoryElement = page.locator(
-        `[data-category="${category}"], ` +
-        `[data-category="${category.toLowerCase()}"], ` +
-        `.photo-${category.toLowerCase()}, ` +
-        `input[name*="${category.toLowerCase()}"], ` +
-        `button:has-text("${category}")`
-      );
-
       // At minimum, check the page contains references to categories
       const pageContent = await page.content();
       const hasCategory = pageContent.toLowerCase().includes(category.toLowerCase()) ||

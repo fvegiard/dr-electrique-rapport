@@ -303,7 +303,7 @@
       };
 
       const submitRapport = async rapport => {
-        // Soumettre à Supabase
+        // 1. Soumettre rapport à Supabase
         const supabaseData = {
           date: rapport.date,
           redacteur: rapport.redacteur,
@@ -323,21 +323,77 @@
           total_photos: rapport.totalPhotos,
           has_extras: rapport.hasExtras,
           total_extras: rapport.totalExtras,
-          photos_generales: rapport.photosGenerales || [],
-          photos_avant: rapport.photosAvant || [],
-          photos_apres: rapport.photosApres || [],
-          photos_problemes: rapport.photosProblemes || [],
         };
 
         const { data, error } = await supabase.from('rapports').insert([supabaseData]).select();
 
         if (error) {
           console.error('Erreur Supabase:', error);
-          // Fallback localStorage si offline
           const pending = JSON.parse(localStorage.getItem('dr_rapports_pending') || '[]');
           pending.push(rapport);
           localStorage.setItem('dr_rapports_pending', JSON.stringify(pending));
           throw new Error('Erreur de connexion - rapport sauvegardé localement');
+        }
+
+        const rapportId = data[0].id;
+        console.log('Rapport créé:', rapportId);
+
+        // 2. Insérer photos dans table photos avec rapport_id
+        const photoRecords = [];
+
+        (rapport.photosGenerales || []).forEach(p => {
+          photoRecords.push({
+            rapport_id: rapportId,
+            category: 'GENERAL',
+            url: p.data || '',
+            latitude: p.geolocation?.latitude || null,
+            longitude: p.geolocation?.longitude || null,
+            gps_accuracy: p.geolocation?.accuracy || null,
+          });
+        });
+
+        (rapport.photosAvant || []).forEach(p => {
+          photoRecords.push({
+            rapport_id: rapportId,
+            category: 'AVANT',
+            url: p.data || '',
+            latitude: p.geolocation?.latitude || null,
+            longitude: p.geolocation?.longitude || null,
+            gps_accuracy: p.geolocation?.accuracy || null,
+          });
+        });
+
+        (rapport.photosApres || []).forEach(p => {
+          photoRecords.push({
+            rapport_id: rapportId,
+            category: 'APRES',
+            url: p.data || '',
+            latitude: p.geolocation?.latitude || null,
+            longitude: p.geolocation?.longitude || null,
+            gps_accuracy: p.geolocation?.accuracy || null,
+          });
+        });
+
+        (rapport.photosProblemes || []).forEach(p => {
+          photoRecords.push({
+            rapport_id: rapportId,
+            category: 'PROBLEME',
+            url: p.data || '',
+            latitude: p.geolocation?.latitude || null,
+            longitude: p.geolocation?.longitude || null,
+            gps_accuracy: p.geolocation?.accuracy || null,
+          });
+        });
+
+        if (photoRecords.length > 0) {
+          console.log('Uploading', photoRecords.length, 'photos...');
+          const { error: photoError } = await supabase.from('photos').insert(photoRecords);
+          if (photoError) {
+            console.error('Erreur photos:', photoError);
+            // Continue anyway - rapport is saved
+          } else {
+            console.log('Photos uploadées!');
+          }
         }
 
         return data[0];

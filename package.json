@@ -6,7 +6,8 @@
   "main": "index.html",
   "scripts": {
     "dev": "vite --host --mode development",
-    "build": "vite build && cp dashboard-a2c15af64b97e73f.html dist/",
+    "build": "mkdir -p dist && cp rapport-form.html dist/index.html && cp dashboard-a2c15af64b97e73f.html dist/",
+    "build:vite": "vite build && cp dashboard-a2c15af64b97e73f.html dist/",
     "preview": "vite preview --host",
     "serve": "vite preview --host --port 8003",
     "test": "vitest --run",

@@ -323,6 +323,10 @@
           total_photos: rapport.totalPhotos,
           has_extras: rapport.hasExtras,
           total_extras: rapport.totalExtras,
+          photos_generales: rapport.photosGenerales || [],
+          photos_avant: rapport.photosAvant || [],
+          photos_apres: rapport.photosApres || [],
+          photos_problemes: rapport.photosProblemes || [],
         };
 
         const { data, error } = await supabase.from('rapports').insert([supabaseData]).select();

@@ -57,15 +57,17 @@ export const MATERIAUX_COMMUNS: string[] = [
 ];
 
 export const SUPABASE_CONFIG = {
-  URL: import.meta.env.VITE_SUPABASE_URL || '',
-  ANON_KEY: import.meta.env.VITE_SUPABASE_ANON_KEY || ''
+  URL: import.meta.env.VITE_SUPABASE_URL || 'https://iawsshgkogntmdzrfjyw.supabase.co',
+  ANON_KEY:
+    import.meta.env.VITE_SUPABASE_ANON_KEY ||
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlhd3NzaGdrb2dudG1kenJmanl3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc2NDkwMDUsImV4cCI6MjA4MzIyNTAwNX0.1BxhI5SWLL5786qsshidOMpTsOrGeNob6xpcKQjI4s4',
 };
 
 export const EMAILJS_CONFIG = {
   SERVICE_ID: 'service_drelectrique',
   TEMPLATE_ID: 'template_rapport',
   PUBLIC_KEY: 'YOUR_PUBLIC_KEY', // Placeholder from original code
-  BACKUP_EMAIL: 'fvegiard@dreelectrique.com'
+  BACKUP_EMAIL: 'fvegiard@dreelectrique.com',
 };
 
 export const LOCAL_STORAGE_KEY = 'dr_rapports_pending';

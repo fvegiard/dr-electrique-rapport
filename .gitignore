@@ -51,6 +51,11 @@ Thumbs.db
 coverage/
 htmlcov/
 .nyc_output/
+playwright-report/
+test-results/
+
+# Backups
+*.backup
 
 # Temporary
 *.pem

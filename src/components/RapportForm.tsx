@@ -147,10 +147,10 @@ const RapportForm: React.FC = () => {
     // Helper function to map photos correctly
     const mapPhotos = (photos: Photo[]) =>
       (photos || [])
-        .filter(p => p.storageUrl || p.preview)
+        .filter(p => p.storageUrl || p.preview || p.data)
         .map(p => ({
           id: p.id,
-          url: p.storageUrl || p.preview || '',
+          url: p.storageUrl || p.preview || p.data || '',
           timestamp: p.timestamp,
           category: p.category,
           gps: p.geolocation ? {

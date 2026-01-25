@@ -3,18 +3,19 @@
 ## Repository Stats
 - **Total Files:** 82
 - **Languages:** ts,js,sh
-- **Last Updated:** 2026-01-25 05:40 UTC
+- **Last Updated:** 2026-01-25 06:02 UTC
 
 ## Recent Commits
 ```
-- 3db26fc fix: show all reports by default in dashboard (22 seconds ago)
+- ff51915 fix(photos): remove base64 fallback, single source of truth (16 seconds ago)
+- e852139 chore: auto-update context (22 minutes ago)
+- 3db26fc fix: show all reports by default in dashboard (23 minutes ago)
 - b0f125f chore: auto-update context (2 days ago)
 - 585d7e5 feat: add Claude sync system for cross-device context (2 days ago)
-- 9da427b fix: insert photos into separate photos table with rapport_id (2 days ago)
-- 78f2e8d fix: include photos arrays in Supabase submission (2 days ago)
 ```
 
 ## Open Issues
+31	OPEN	CI Pipeline Failed - 3db26fc	bug, ci-failure, automated	2026-01-25T05:41:02Z
 21	OPEN	[BUG] Photos perdues - Manque preview fallback dans photoTransaction	bug	2026-01-23T07:39:32Z
 
 ## Directory Structure

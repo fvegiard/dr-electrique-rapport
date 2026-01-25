@@ -1,25 +1,21 @@
 # Auto-Generated Context
 
 ## Repository Stats
-- **Total Files:** 81
+- **Total Files:** 82
 - **Languages:** ts,js,sh
-- **Last Updated:** 2026-01-23 14:30 UTC
+- **Last Updated:** 2026-01-25 05:40 UTC
 
 ## Recent Commits
 ```
-- 585d7e5 feat: add Claude sync system for cross-device context (8 seconds ago)
-- 9da427b fix: insert photos into separate photos table with rapport_id (6 hours ago)
-- 78f2e8d fix: include photos arrays in Supabase submission (6 hours ago)
-- b7ee3c0 chore: remove temp screenshots (6 hours ago)
-- e012b3d fix: temperature null handling + Maxime Robert default + test scripts (6 hours ago)
+- 3db26fc fix: show all reports by default in dashboard (22 seconds ago)
+- b0f125f chore: auto-update context (2 days ago)
+- 585d7e5 feat: add Claude sync system for cross-device context (2 days ago)
+- 9da427b fix: insert photos into separate photos table with rapport_id (2 days ago)
+- 78f2e8d fix: include photos arrays in Supabase submission (2 days ago)
 ```
 
 ## Open Issues
-29	OPEN	CI Pipeline Failed - 9da427b	bug, ci-failure, automated	2026-01-23T08:32:19Z
-28	OPEN	CI Pipeline Failed - 78f2e8d	bug, ci-failure, automated	2026-01-23T08:30:15Z
-27	OPEN	CI Pipeline Failed - e012b3d	bug, ci-failure, automated	2026-01-23T08:27:21Z
-26	OPEN	CI Pipeline Failed - b7ee3c0	bug, ci-failure, automated	2026-01-23T08:27:10Z
-25	OPEN	CI Pipeline Failed - 7c03092	bug, ci-failure, automated	2026-01-23T08:16:40Z
+21	OPEN	[BUG] Photos perdues - Manque preview fallback dans photoTransaction	bug	2026-01-23T07:39:32Z
 
 ## Directory Structure
 ```

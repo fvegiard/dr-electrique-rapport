@@ -334,7 +334,7 @@
         { id: 'PRJ-005', nom: 'Tour des Canadiens 4', client: 'Canderel' },
       ];
 
-      const getTodayStr = () => new Date().toISOString().split('T')[0];
+      const getTodayStr = () => 'all'; // Default: show all reports
       const formatDate = d => new Date(d).toLocaleDateString('fr-CA');
 
       const Icons = {
@@ -586,10 +586,16 @@
             TABLEAU DE BORD
           </h1>
           <div className='flex items-center gap-4'>
+            <button
+              onClick={() => setSelectedDate('all')}
+              className={`px-3 py-1 rounded text-sm ${selectedDate === 'all' ? 'bg-green-600' : 'bg-gray-700'}`}
+            >
+              Tous
+            </button>
             <input
               type='date'
-              value={selectedDate}
-              onChange={e => setSelectedDate(e.target.value)}
+              value={selectedDate === 'all' ? '' : selectedDate}
+              onChange={e => setSelectedDate(e.target.value || 'all')}
             />
             <div className='flex items-center gap-2'>
               <span className='text-gray-400 text-sm'>{userName}</span>
@@ -602,8 +608,8 @@
       );
 
       const DashboardView = ({ rapports, selectedDate, setActiveTab, setFilterProjet }) => {
-        const todayRapports = rapports.filter(r => r.date === selectedDate);
-        console.log('📊 Today reports:', todayRapports.length, 'for date:', selectedDate);
+        const todayRapports = selectedDate === 'all' ? rapports : rapports.filter(r => r.date === selectedDate);
+        console.log('📊 Reports:', todayRapports.length, 'for:', selectedDate === 'all' ? 'ALL' : selectedDate);
         console.log(
           'Hours data:',
           todayRapports.map(r => ({ redacteur: r.redacteur, totalHeuresMo: r.totalHeuresMo }))
@@ -755,7 +761,7 @@
 
       const RapportsView = ({ rapports, selectedDate, filterProjet, setFilterProjet }) => {
         const [expandedId, setExpandedId] = useState(null);
-        let todayRapports = rapports.filter(r => r.date === selectedDate);
+        let todayRapports = selectedDate === 'all' ? [...rapports] : rapports.filter(r => r.date === selectedDate);
 
         // Apply project filter if set
         if (filterProjet) {
@@ -766,7 +772,7 @@
           <div className='animate-fade'>
             <div className='flex items-center justify-between mb-4'>
               <div className='section-title mb-0 border-0 pb-0'>
-                RAPPORTS DU {formatDate(selectedDate)} ({todayRapports.length})
+                {selectedDate === 'all' ? `TOUS LES RAPPORTS (${todayRapports.length})` : `RAPPORTS DU ${formatDate(selectedDate)} (${todayRapports.length})`}
               </div>
               {filterProjet && (
                 <button

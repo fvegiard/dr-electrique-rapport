@@ -144,24 +144,6 @@ const RapportForm: React.FC = () => {
     }, 0);
     // ============== FIN FIX BUG HEURES ==============
 
-    // Helper function to map photos correctly
-    const mapPhotos = (photos: Photo[]) =>
-      (photos || [])
-        .filter(p => p.storageUrl || p.preview || p.data)
-        .map(p => ({
-          id: p.id,
-          url: p.storageUrl || p.preview || p.data || '',
-          timestamp: p.timestamp,
-          category: p.category,
-          gps: p.geolocation ? {
-            latitude: p.geolocation.latitude,
-            longitude: p.geolocation.longitude,
-            accuracy: p.geolocation.accuracy,
-            enabled: p.geolocation.enabled
-          } : null,
-          metadata: p.metadata || null
-        }));
-
     // ============== UTILISER LES REFS AU LIEU DU STATE ==============
     // Les refs contiennent toujours la valeur la plus récente (pas de stale closure)
     const currentPhotosGenerales = photosGeneralesRef.current;
@@ -209,21 +191,12 @@ const RapportForm: React.FC = () => {
         .filter(o => o.isExtra)
         .reduce((acc, o) => acc + (parseFloat(o.montantExtra) || 0), 0),
 
-      // Mapper les photos depuis les REFS (pas de stale closure!)
-      photos_generales: mapPhotos(currentPhotosGenerales),
-      photos_avant: mapPhotos(currentPhotosAvant),
-      photos_apres: mapPhotos(currentPhotosApres),
-      photos_problemes: mapPhotos(currentPhotosProblemes)
     };
 
     // DEBUG: Log final payload
     console.log('[Submit] Rapport payload:', {
       total_heures_mo: rapportForSubmit.total_heures_mo,
-      total_photos: rapportForSubmit.total_photos,
-      photos_generales_count: rapportForSubmit.photos_generales.length,
-      photos_avant_count: rapportForSubmit.photos_avant.length,
-      photos_apres_count: rapportForSubmit.photos_apres.length,
-      photos_problemes_count: rapportForSubmit.photos_problemes.length
+      total_photos: rapportForSubmit.total_photos
     });
 
     try {

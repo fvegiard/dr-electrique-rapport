@@ -33,10 +33,10 @@ const transformPhotosToRecords = (
   rapportId: string,
   category: string
 ): PhotoInsertRecord[] => {
-  return (photos || []).map(photo => ({
+  return (photos || []).filter(photo => photo.storageUrl).map(photo => ({
     rapport_id: rapportId,
     category,
-    url: photo.storageUrl || photo.data || '',
+    url: photo.storageUrl || '',
     latitude: photo.geolocation?.latitude ?? null,
     longitude: photo.geolocation?.longitude ?? null,
     gps_accuracy: photo.geolocation?.accuracy ?? null,

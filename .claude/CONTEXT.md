@@ -3,18 +3,19 @@
 ## Repository Stats
 - **Total Files:** 82
 - **Languages:** ts,js,sh
-- **Last Updated:** 2026-01-25 06:02 UTC
+- **Last Updated:** 2026-01-25 06:21 UTC
 
 ## Recent Commits
 ```
-- ff51915 fix(photos): remove base64 fallback, single source of truth (16 seconds ago)
-- e852139 chore: auto-update context (22 minutes ago)
-- 3db26fc fix: show all reports by default in dashboard (23 minutes ago)
-- b0f125f chore: auto-update context (2 days ago)
-- 585d7e5 feat: add Claude sync system for cross-device context (2 days ago)
+- 5fb4a24 fix(dashboard): show all photos without date filter (13 seconds ago)
+- 88029bf chore: auto-update context (18 minutes ago)
+- ff51915 fix(photos): remove base64 fallback, single source of truth (19 minutes ago)
+- e852139 chore: auto-update context (40 minutes ago)
+- 3db26fc fix: show all reports by default in dashboard (41 minutes ago)
 ```
 
 ## Open Issues
+32	OPEN	CI Pipeline Failed - ff51915	bug, ci-failure, automated	2026-01-25T06:03:15Z
 31	OPEN	CI Pipeline Failed - 3db26fc	bug, ci-failure, automated	2026-01-25T05:41:02Z
 21	OPEN	[BUG] Photos perdues - Manque preview fallback dans photoTransaction	bug	2026-01-23T07:39:32Z
 

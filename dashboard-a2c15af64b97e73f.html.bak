@@ -608,7 +608,7 @@
       );
 
       const DashboardView = ({ rapports, selectedDate, setActiveTab, setFilterProjet }) => {
-        const todayRapports = selectedDate === 'all' ? rapports : rapports.filter(r => selectedDate === 'all' || r.date === selectedDate);
+        const todayRapports = selectedDate === 'all' ? rapports : rapports;
         console.log('📊 Reports:', todayRapports.length, 'for:', selectedDate === 'all' ? 'ALL' : selectedDate);
         console.log(
           'Hours data:',
@@ -761,7 +761,7 @@
 
       const RapportsView = ({ rapports, selectedDate, filterProjet, setFilterProjet }) => {
         const [expandedId, setExpandedId] = useState(null);
-        let todayRapports = selectedDate === 'all' ? [...rapports] : rapports.filter(r => selectedDate === 'all' || r.date === selectedDate);
+        let todayRapports = selectedDate === 'all' ? [...rapports] : rapports;
 
         // Apply project filter if set
         if (filterProjet) {
@@ -891,7 +891,7 @@
       const OrdresView = ({ rapports, selectedDate }) => {
         const [expandedId, setExpandedId] = useState(null);
         const allOrdres = rapports
-          .filter(r => selectedDate === 'all' || r.date === selectedDate)
+          
           .flatMap(r => (r.ordresTravail || []).map(o => ({ ...o, rapport: r })))
           .filter(o => o.description);
 
@@ -977,7 +977,7 @@
       // FIX: ReunionsView - properly parse and display reunions
       const ReunionsView = ({ rapports, selectedDate }) => {
         const reunions = rapports
-          .filter(r => selectedDate === 'all' || r.date === selectedDate)
+          
           .flatMap(r => {
             const parsed = parseReunions(r.reunions);
             const projet = PROJETS.find(p => p.id === r.projet)?.nom;
@@ -1026,7 +1026,7 @@
       // FIX: PhotosView - handle missing images gracefully
       const PhotosView = ({ rapports, selectedDate }) => {
         const allPhotos = rapports
-          .filter(r => selectedDate === 'all' || r.date === selectedDate)
+          
           .flatMap(r => {
             const photos = [];
             (r.photosGenerales || []).forEach(p =>

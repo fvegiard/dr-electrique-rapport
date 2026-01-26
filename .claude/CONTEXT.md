@@ -3,18 +3,19 @@
 ## Repository Stats
 - **Total Files:** 83
 - **Languages:** ts,js,sh
-- **Last Updated:** 2026-01-26 06:02 UTC
+- **Last Updated:** 2026-01-26 06:05 UTC
 
 ## Recent Commits
 ```
-- caf5b6f fix: PhotosView date filter now handles 'all' case correctly (20 seconds ago)
+- 478c202 fix: use real build command in production (9 seconds ago)
+- 38dcba1 chore: auto-update context (2 minutes ago)
+- caf5b6f fix: PhotosView date filter now handles 'all' case correctly (3 minutes ago)
 - 243bda6 chore: auto-update context (13 hours ago)
 - 6f34576 fix: disable CI issue spam, keep logging (13 hours ago)
-- 34a2ff2 chore: auto-update context (24 hours ago)
-- 5fb4a24 fix(dashboard): show all photos without date filter (24 hours ago)
 ```
 
 ## Open Issues
+35	OPEN	CI Pipeline Failed - caf5b6f	bug, ci-failure, automated	2026-01-26T06:03:26Z
 34	OPEN	CI Pipeline Failed - 6f34576	bug, ci-failure, automated	2026-01-25T16:53:17Z
 21	OPEN	[BUG] Photos perdues - Manque preview fallback dans photoTransaction	bug	2026-01-23T07:39:32Z
 

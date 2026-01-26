@@ -19,7 +19,7 @@
   NODE_VERSION = "18"
 
 [context.production]
-  command = "echo 'Production build complete'"
+  command = "npm run build"
 
 [context.deploy-preview]
   command = "echo 'Deploy preview ready'"

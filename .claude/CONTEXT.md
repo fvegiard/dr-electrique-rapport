@@ -3,15 +3,15 @@
 ## Repository Stats
 - **Total Files:** 84
 - **Languages:** ts,js,sh
-- **Last Updated:** 2026-02-01 19:35 UTC
+- **Last Updated:** 2026-02-01 19:37 UTC
 
 ## Recent Commits
 ```
-- 3b39179 fix(ci): resolve all CI/CD pipeline failures (22 seconds ago)
+- 5a0401c fix(ci): update validation to search React source files instead of index.html (13 seconds ago)
+- 2cb9745 chore: auto-update context (2 minutes ago)
+- 3b39179 fix(ci): resolve all CI/CD pipeline failures (3 minutes ago)
 - f4a11f6 chore: auto-update context (7 days ago)
 - 478c202 fix: use real build command in production (7 days ago)
-- 38dcba1 chore: auto-update context (7 days ago)
-- caf5b6f fix: PhotosView date filter now handles 'all' case correctly (7 days ago)
 ```
 
 ## Open Issues

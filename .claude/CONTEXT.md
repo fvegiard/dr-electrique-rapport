@@ -1,22 +1,20 @@
 # Auto-Generated Context
 
 ## Repository Stats
-- **Total Files:** 83
+- **Total Files:** 84
 - **Languages:** ts,js,sh
-- **Last Updated:** 2026-01-26 06:05 UTC
+- **Last Updated:** 2026-02-01 19:35 UTC
 
 ## Recent Commits
 ```
-- 478c202 fix: use real build command in production (9 seconds ago)
-- 38dcba1 chore: auto-update context (2 minutes ago)
-- caf5b6f fix: PhotosView date filter now handles 'all' case correctly (3 minutes ago)
-- 243bda6 chore: auto-update context (13 hours ago)
-- 6f34576 fix: disable CI issue spam, keep logging (13 hours ago)
+- 3b39179 fix(ci): resolve all CI/CD pipeline failures (22 seconds ago)
+- f4a11f6 chore: auto-update context (7 days ago)
+- 478c202 fix: use real build command in production (7 days ago)
+- 38dcba1 chore: auto-update context (7 days ago)
+- caf5b6f fix: PhotosView date filter now handles 'all' case correctly (7 days ago)
 ```
 
 ## Open Issues
-35	OPEN	CI Pipeline Failed - caf5b6f	bug, ci-failure, automated	2026-01-26T06:03:26Z
-34	OPEN	CI Pipeline Failed - 6f34576	bug, ci-failure, automated	2026-01-25T16:53:17Z
 21	OPEN	[BUG] Photos perdues - Manque preview fallback dans photoTransaction	bug	2026-01-23T07:39:32Z
 
 ## Directory Structure

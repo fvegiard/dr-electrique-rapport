@@ -1,4 +1,4 @@
-name: Photo Upload Fix - CI/CD
+name: Photo Upload - Supabase Validation
 
 on:
   push:
@@ -6,205 +6,84 @@ on:
   pull_request:
     branches: [main]
 
+env:
+  SUPABASE_URL: https://iawsshgkogntmdzrfjyw.supabase.co
+
 jobs:
   test-supabase-connection:
     runs-on: ubuntu-latest
-
-    env:
-      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-      SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Create test script
+      - name: Test Supabase Database
         run: |
-          cat > test-supabase.js << 'EOF'
-          const { createClient } = require('@supabase/supabase-js');
+          response=$(curl -s -w "\n%{http_code}" \
+            "${{ env.SUPABASE_URL }}/rest/v1/rapports?select=id&limit=1" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}")
 
-          const SUPABASE_URL = process.env.SUPABASE_URL;
-          const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
+          http_code=$(echo "$response" | tail -n1)
+          echo "Database HTTP Status: $http_code"
 
-          if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-            console.error('Missing Supabase environment variables');
-            process.exit(1);
-          }
+          if [ "$http_code" != "200" ]; then
+            echo "::error::Supabase database connection failed with status $http_code"
+            exit 1
+          fi
+          echo "Database connection: OK"
 
-          const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-          async function testConnection() {
-            console.log('Testing Supabase connection...');
-
-            // Test 1: Database connection
-            const { data: dbTest, error: dbError } = await supabase
-              .from('rapports')
-              .select('id')
-              .limit(1);
-
-            if (dbError) {
-              console.error('Database connection FAILED:', dbError.message);
-              return false;
-            }
-            console.log('Database connection: OK');
-
-            // Test 2: Storage bucket exists
-            const { data: buckets, error: bucketError } = await supabase
-              .storage
-              .listBuckets();
-
-            if (bucketError) {
-              console.error('Storage access FAILED:', bucketError.message);
-              return false;
-            }
-
-            const photosBucket = buckets.find(b => b.name === 'photos' || b.name === 'rapport-photos');
-            if (!photosBucket) {
-              console.error('Storage bucket for photos NOT FOUND');
-              console.log('Available buckets:', buckets.map(b => b.name));
-              return false;
-            }
-            console.log('Storage bucket found:', photosBucket.name);
-
-            // Test 3: Upload test (small test file)
-            const testData = Buffer.from('test-photo-upload-' + Date.now());
-            const testPath = `test/ci-test-${Date.now()}.txt`;
-
-            const { error: uploadError } = await supabase
-              .storage
-              .from(photosBucket.name)
-              .upload(testPath, testData, {
-                contentType: 'text/plain',
-                upsert: true
-              });
-
-            if (uploadError) {
-              console.error('Upload test FAILED:', uploadError.message);
-              return false;
-            }
-            console.log('Upload test: OK');
-
-            // Cleanup test file
-            await supabase.storage.from(photosBucket.name).remove([testPath]);
-            console.log('Cleanup: OK');
-
-            return true;
-          }
-
-          testConnection()
-            .then(success => {
-              if (success) {
-                console.log('\nAll Supabase tests PASSED');
-                process.exit(0);
-              } else {
-                console.log('\nSupabase tests FAILED');
-                process.exit(1);
-              }
-            })
-            .catch(err => {
-              console.error('Unexpected error:', err);
-              process.exit(1);
-            });
-          EOF
-
-      - name: Run Supabase tests
-        id: supabase-test
-        run: node test-supabase.js
-        continue-on-error: true
-
-      - name: Notification - Tests Passed
-        if: steps.supabase-test.outcome == 'success'
+      - name: Test Supabase Storage Bucket
         run: |
-          echo "========================================"
-          echo "SUPABASE CONNECTION TEST: PASSED"
-          echo "========================================"
-          echo "Database: Connected"
-          echo "Storage: Available"
-          echo "Upload: Working"
-          echo "========================================"
+          response=$(curl -s -w "\n%{http_code}" \
+            "${{ env.SUPABASE_URL }}/storage/v1/bucket/photos" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}")
 
-      - name: Notification - Tests Failed
-        if: steps.supabase-test.outcome == 'failure'
+          http_code=$(echo "$response" | tail -n1)
+
+          if [ "$http_code" = "200" ]; then
+            echo "Storage bucket 'photos': OK"
+          elif [ "$http_code" = "404" ]; then
+            echo "::warning::Storage bucket 'photos' not found - photo upload will fail"
+          else
+            echo "::warning::Storage check returned status $http_code"
+          fi
+
+      - name: Test Storage Upload Capability
         run: |
-          echo "========================================"
-          echo "SUPABASE CONNECTION TEST: FAILED"
-          echo "========================================"
-          echo "Check TASK.md for troubleshooting steps"
-          echo "========================================"
+          test_path="test/ci-test-$(date +%s).txt"
 
-  create-issue-on-failure:
-    needs: test-supabase-connection
-    runs-on: ubuntu-latest
-    if: failure()
+          upload_response=$(curl -s -w "\n%{http_code}" \
+            "${{ env.SUPABASE_URL }}/storage/v1/object/photos/${test_path}" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Content-Type: text/plain" \
+            -X POST \
+            -d "ci-test-upload")
 
-    permissions:
-      issues: write
+          upload_code=$(echo "$upload_response" | tail -n1)
 
-    steps:
-      - name: Create GitHub Issue
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const title = `Photo Upload Test Failed - ${new Date().toISOString().split('T')[0]}`;
+          if [ "$upload_code" = "200" ] || [ "$upload_code" = "201" ]; then
+            echo "Upload test: OK"
 
-            // Check if issue already exists
-            const existingIssues = await github.rest.issues.listForRepo({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: 'open',
-              labels: 'photo-upload-fix'
-            });
+            curl -s -X DELETE \
+              "${{ env.SUPABASE_URL }}/storage/v1/object/photos/${test_path}" \
+              -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+              -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" > /dev/null
 
-            if (existingIssues.data.length > 0) {
-              console.log('Issue already exists, adding comment');
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: existingIssues.data[0].number,
-                body: `Test failed again on commit ${context.sha.substring(0, 7)}\n\nWorkflow: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
-              });
-              return;
-            }
+            echo "Cleanup: OK"
+          else
+            echo "::warning::Upload test returned status $upload_code (bucket may need RLS policy)"
+          fi
 
-            const body = `## Supabase Photo Upload Test Failed
-
-**Commit:** ${context.sha.substring(0, 7)}
-**Run:** ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}
-
-### What Failed
-The automated test could not verify one of:
-- Database connection
-- Storage bucket access
-- File upload capability
-
-### Next Steps
-1. Read \`TASK.md\` for detailed troubleshooting
-2. Check Supabase Dashboard for storage bucket status
-3. Verify RLS policies on storage bucket
-4. Check GitHub Secrets are set correctly
-
-### Quick Fix Checklist
-- [ ] Supabase Storage bucket "photos" exists
-- [ ] RLS policy allows anonymous uploads
-- [ ] \`SUPABASE_URL\` secret is set
-- [ ] \`SUPABASE_ANON_KEY\` secret is set
-`;
-
-            await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: title,
-              body: body,
-              labels: ['bug', 'photo-upload-fix', 'automated']
-            });
-
-            console.log('Issue created successfully');
+      - name: Summary
+        if: always()
+        run: |
+          echo "==========================================="
+          echo "  SUPABASE PHOTO PIPELINE VALIDATION"
+          echo "==========================================="
+          echo "  Database:  Tested"
+          echo "  Storage:   Tested"
+          echo "  Upload:    Tested"
+          echo "==========================================="

@@ -74,39 +74,44 @@ jobs:
           fi
 
       # --- Code Validation ---
-      - name: Validate HTML Structure
+      - name: Validate Source Code Structure
         run: |
-          echo "Checking critical functions..."
+          echo "Checking critical components and functions in src/..."
 
-          # Check for required functions
-          functions=("submitRapport" "PhotoUploadGPS" "calculateHours")
-          for func in "${functions[@]}"; do
-            if grep -q "$func" index.html; then
-              echo "✅ Found: $func"
+          checks=(
+            "handleSubmit:src/components/RapportForm.tsx"
+            "PhotoUploadGPS:src/components/form/PhotoUploadGPS.tsx"
+            "calculateHours:src/components/RapportForm.tsx"
+            "uploadPhotosWithRetry:src/lib/photoTransaction.ts"
+            "supabase:src/services/supabase.ts"
+          )
+
+          for check in "${checks[@]}"; do
+            func="${check%%:*}"
+            file="${check##*:}"
+            if [ -f "$file" ] && grep -q "$func" "$file"; then
+              echo "✅ Found: $func in $file"
             else
-              echo "::error::Missing critical function: $func"
+              echo "::error::Missing critical code: $func in $file"
               exit 1
             fi
           done
 
       - name: Check for Common Bugs
         run: |
-          echo "Scanning for known bug patterns..."
+          echo "Scanning source files for known bug patterns..."
 
-          # Check for unsafe array spreads (should use || [])
-          if grep -P '\[\.\.\.\w+\]' index.html | grep -v '|| \[\]' | grep -v 'prev ||' > /dev/null; then
+          # Check for unsafe array spreads in TSX files
+          if grep -rP '\[\.\.\.\w+\]' src/ --include='*.tsx' --include='*.ts' | grep -v '|| \[\]' | grep -v 'prev ||' | grep -v node_modules > /dev/null 2>&1; then
             echo "::warning::Found potential unsafe array spread (missing || [])"
           fi
 
-          # Check for buttons without type attribute
-          button_count=$(grep -c '<button' index.html || echo "0")
-          typed_button_count=$(grep -c 'type="button"' index.html || echo "0")
-          submit_button_count=$(grep -c 'type="submit"' index.html || echo "0")
+          # Check buttons have type attribute in TSX
+          button_count=$(grep -rc '<button' src/ --include='*.tsx' 2>/dev/null | awk -F: '{s+=$2} END {print s}')
+          typed_count=$(grep -rc "type='button\|type=\"button" src/ --include='*.tsx' 2>/dev/null | awk -F: '{s+=$2} END {print s}')
 
-          echo "Total buttons: $button_count"
-          echo "type='button': $typed_button_count"
-          echo "type='submit': $submit_button_count"
-
+          echo "Total <button in TSX: ${button_count:-0}"
+          echo "With type attr: ${typed_count:-0}"
           echo "✅ Bug scan complete"
 
       - name: Validate Netlify Functions

@@ -48,7 +48,8 @@ test.describe('Form Rendering', () => {
 
     const fileInputs = page.locator('input[type="file"][accept="image/*"]');
     const count = await fileInputs.count();
-    expect(count).toBe(4);
+    // 4 photo categories (GÉNÉRALES, AVANT, APRÈS, PROBLÈMES) + 1 MaterialScanner
+    expect(count).toBe(5);
   });
 });
 
@@ -71,7 +72,7 @@ test.describe('Form Validation', () => {
     await submitBtn.click();
 
     await expect(
-      page.locator('text=ENVOI EN COURS').or(page.locator('text=RAPPORT ENVOYÉ')).or(page.locator('text=NOUVEAU RAPPORT'))
+      page.locator('text=ENVOI EN COURS').or(page.locator('text=RAPPORT ENVOYÉ')).or(page.locator('text=NOUVEAU RAPPORT')).first()
     ).toBeVisible({ timeout: 30000 });
   });
 });
@@ -152,7 +153,7 @@ describeWithSupabase('Photo Upload E2E (Supabase)', () => {
     await submitBtn.click();
 
     await expect(
-      page.locator('text=NOUVEAU RAPPORT').or(page.locator('text=RAPPORT ENVOYÉ'))
+      page.getByRole('heading', { name: /RAPPORT ENVOYÉ/i })
     ).toBeVisible({ timeout: 30000 });
 
     const rapport = await getMostRecentRapport();

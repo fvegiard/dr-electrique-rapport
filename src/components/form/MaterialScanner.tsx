@@ -86,7 +86,7 @@ Si tu ne reconnais pas de matériel électrique, réponds: {"item": "Non identif
         setEditedItem(detected.item);
         setEditedQty(detected.quantite);
         setEditedUnit(detected.unite);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Claude API error:', err);
         // Fallback to manual entry
         setDetectedMaterial({

@@ -1,4 +1,5 @@
 import { SupabaseClient } from '@supabase/supabase-js';
+import type { GeoLocation } from '../types';
 
 // ============== CONFIG ==============
 export const PHOTO_CONFIG = {
@@ -167,8 +168,8 @@ export const uploadPhotoToStorage = async (
       console.log(`[Photo] Upload reussi (tentative ${attempt + 1}):`, path);
       return { path, url: urlData.publicUrl, success: true };
 
-    } catch (err: any) {
-      lastError = err.message || 'Unknown error';
+    } catch (err: unknown) {
+      lastError = err instanceof Error ? err.message : 'Unknown error';
       console.warn(`[Photo] Upload tentative ${attempt + 1}/${config.UPLOAD_RETRIES} echouee:`, lastError);
 
       if (attempt < config.UPLOAD_RETRIES - 1) {
@@ -194,7 +195,7 @@ export const blobToBase64 = (blob: Blob): Promise<string> => {
 // ============== PROCESS PHOTO (Main function) ==============
 export const processPhoto = async (
     file: File,
-    geo: any,
+    geo: GeoLocation | null,
     category: string,
     projectId: string,
     supabase: SupabaseClient
@@ -204,7 +205,7 @@ export const processPhoto = async (
   const timeStr = now.toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' });
   let watermarkText = `DR Electrique | ${dateStr} ${timeStr}`;
 
-  if (geo && geo.enabled && geo.latitude) {
+  if (geo && geo.enabled && geo.latitude && geo.longitude) {
     watermarkText += ` | GPS ${geo.latitude.toFixed(4)}, ${geo.longitude.toFixed(4)}`;
   }
 

@@ -22,7 +22,7 @@ export interface PhotoMetadata {
   compressedSize?: number;
   originalSize?: number;
   compressionRatio?: number;
-  [key: string]: any;
+  [key: string]: string | number | boolean | undefined;
 }
 
 export interface Photo {

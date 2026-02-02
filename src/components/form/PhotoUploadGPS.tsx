@@ -76,9 +76,9 @@ const PhotoUploadGPS: React.FC<PhotoUploadGPSProps> = ({
         if (processed.metadata) {
           console.log(`[Photo] ${file.name}: ${processed.metadata.compressionRatio}% compressé`);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('[Photo] Processing error:', err);
-        alert('Erreur traitement photo: ' + err.message);
+        alert('Erreur traitement photo: ' + (err instanceof Error ? err.message : String(err)));
       }
     }
     

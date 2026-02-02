@@ -89,7 +89,7 @@ const RapportForm: React.FC = () => {
   }, [data.photosProblemes]);
   // ============== FIN FIX STALE CLOSURE ==============
 
-  const update = (key: keyof DailyReport, val: any) => setData(prev => ({ ...prev, [key]: val }));
+  const update = <K extends keyof DailyReport>(key: K, val: DailyReport[K]) => setData(prev => ({ ...prev, [key]: val }));
 
   // Helper to calculate hours
   const calculateHours = (debut: string, fin: string) => {
@@ -237,9 +237,9 @@ const RapportForm: React.FC = () => {
 
       setStep('success');
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[Submit] Error:', error);
-      savePendingRapport({ ...data, errorMsg: error.message });
+      savePendingRapport({ ...data, errorMsg: error instanceof Error ? error.message : String(error) });
       setStep('offline');
     }
   };

@@ -1,4 +1,3 @@
-import React from 'react';
 import { Icons } from '../ui/Icons';
 import TimePicker from './TimePicker';
 
@@ -8,32 +7,37 @@ interface FieldConfig {
   type?: string;
   width?: string;
   options?: string[] | { value: string; label: string }[];
-  default?: any;
+  default?: string;
 }
 
-interface DynamicRowsProps {
-  rows: any[];
-  setRows: (rows: any[]) => void;
+interface DynamicRowsProps<T extends { id: string }> {
+  rows: T[];
+  setRows: (rows: T[]) => void;
   fields: FieldConfig[];
   addLabel: string;
   color?: string;
 }
 
-const DynamicRows: React.FC<DynamicRowsProps> = ({ rows, setRows, fields, addLabel, color = '#E63946' }) => {
+function DynamicRows<T extends { id: string }>({ rows, setRows, fields, addLabel, color = '#E63946' }: DynamicRowsProps<T>) {
   const generateId = () => Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
 
   const addRow = () => {
-    const newRow: any = { id: generateId() };
-    fields.forEach(f => (newRow[f.key] = f.default || ''));
-    setRows([...rows, newRow]);
+    const newRow = { id: generateId() } as Record<string, string> & { id: string };
+    fields.forEach(f => { newRow[f.key] = f.default || ''; });
+    setRows([...rows, newRow as T]);
   };
 
-  const updateRow = (id: string, key: string, value: any) => {
+  const updateRow = (id: string, key: string, value: string) => {
     setRows(rows.map(r => (r.id === id ? { ...r, [key]: value } : r)));
   };
 
   const removeRow = (id: string) => {
     if (rows.length > 1) setRows(rows.filter(r => r.id !== id));
+  };
+
+  const getFieldValue = (row: T, key: string): string => {
+    const val = (row as Record<string, unknown>)[key];
+    return val != null ? String(val) : '';
   };
 
   return (
@@ -48,36 +52,41 @@ const DynamicRows: React.FC<DynamicRowsProps> = ({ rows, setRows, fields, addLab
               field.type === 'select' ? (
                 <select
                   key={field.key}
-                  value={row[field.key] || ''}
+                  value={getFieldValue(row, field.key)}
                   onChange={e => updateRow(row.id, field.key, e.target.value)}
                   className='px-3 py-3 rounded-xl bg-black/40 border border-white/10 text-white w-full'
                 >
                   <option value=''>{field.placeholder}</option>
-                  {field.options?.map((opt: any) => (
-                    <option key={opt.value || opt} value={opt.value || opt}>
-                      {opt.label || opt}
-                    </option>
-                  ))}
+                  {field.options?.map(opt => {
+                    const val = typeof opt === 'string' ? opt : opt.value;
+                    const label = typeof opt === 'string' ? opt : opt.label;
+                    return (
+                      <option key={val} value={val}>
+                        {label}
+                      </option>
+                    );
+                  })}
                 </select>
               ) : field.type === 'datalist' ? (
                 <div key={field.key}>
                   <input
                     list={`list-${field.key}-${row.id}`}
-                    value={row[field.key] || ''}
+                    value={getFieldValue(row, field.key)}
                     onChange={e => updateRow(row.id, field.key, e.target.value)}
                     placeholder={field.placeholder}
                     className='w-full px-3 py-3 rounded-xl bg-black/40 border border-white/10 text-white'
                   />
                   <datalist id={`list-${field.key}-${row.id}`}>
-                    {field.options?.map((opt: any) => (
-                      <option key={opt} value={opt} />
-                    ))}
+                    {field.options?.map(opt => {
+                      const val = typeof opt === 'string' ? opt : opt.value;
+                      return <option key={val} value={val} />;
+                    })}
                   </datalist>
                 </div>
               ) : field.type === 'time-picker' ? (
                 <TimePicker
                   key={field.key}
-                  value={row[field.key] || '06:00'}
+                  value={getFieldValue(row, field.key) || '06:00'}
                   onChange={val => updateRow(row.id, field.key, val)}
                   label={field.placeholder}
                 />
@@ -87,7 +96,7 @@ const DynamicRows: React.FC<DynamicRowsProps> = ({ rows, setRows, fields, addLab
                   type={field.type || 'text'}
                   inputMode={field.type === 'number' ? 'decimal' : 'text'}
                   placeholder={field.placeholder}
-                  value={row[field.key] || ''}
+                  value={getFieldValue(row, field.key)}
                   onChange={e => updateRow(row.id, field.key, e.target.value)}
                   className='px-3 py-3 rounded-xl bg-black/40 border border-white/10 text-white w-full'
                 />
@@ -114,6 +123,6 @@ const DynamicRows: React.FC<DynamicRowsProps> = ({ rows, setRows, fields, addLab
       </button>
     </div>
   );
-};
+}
 
 export default DynamicRows;

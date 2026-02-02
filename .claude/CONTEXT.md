@@ -1,21 +1,22 @@
 # Auto-Generated Context
 
 ## Repository Stats
-- **Total Files:** 84
+- **Total Files:** 82
 - **Languages:** ts,js,sh
-- **Last Updated:** 2026-02-01 19:37 UTC
+- **Last Updated:** 2026-02-02 00:08 UTC
 
 ## Recent Commits
 ```
-- 5a0401c fix(ci): update validation to search React source files instead of index.html (13 seconds ago)
-- 2cb9745 chore: auto-update context (2 minutes ago)
-- 3b39179 fix(ci): resolve all CI/CD pipeline failures (3 minutes ago)
-- f4a11f6 chore: auto-update context (7 days ago)
-- 478c202 fix: use real build command in production (7 days ago)
+- 0e209ec refactor(ci): consolidate 3 workflows into single CI/CD pipeline (16 seconds ago)
+- b713c46 chore: auto-update context (5 hours ago)
+- 5a0401c fix(ci): update validation to search React source files instead of index.html (5 hours ago)
+- 2cb9745 chore: auto-update context (5 hours ago)
+- 3b39179 fix(ci): resolve all CI/CD pipeline failures (5 hours ago)
 ```
 
 ## Open Issues
-21	OPEN	[BUG] Photos perdues - Manque preview fallback dans photoTransaction	bug	2026-01-23T07:39:32Z
+40	OPEN	Éliminer les 14 warnings TypeScript no-explicit-any	enhancement	2026-02-01T21:15:39Z
+38	OPEN	Réécrire les tests E2E Playwright avec les bons selectors React	enhancement	2026-02-01T21:15:35Z
 
 ## Directory Structure
 ```

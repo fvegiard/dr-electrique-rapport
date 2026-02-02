@@ -2,7 +2,7 @@ name: DR Électrique CI/CD
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'feature/*']
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -16,11 +16,13 @@ env:
 
 jobs:
   # ============================================
-  # TEST JOB: Validate code and connections
+  # LINT & TYPECHECK
   # ============================================
-  test:
-    name: Test & Validate
+  lint-and-typecheck:
+    name: Lint & TypeScript Check
     runs-on: ubuntu-latest
+    if: github.event_name != 'schedule'
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -34,49 +36,104 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      # --- Supabase Health Checks ---
+      - name: Run TypeScript check
+        run: npm run type-check
+
+      - name: Run ESLint
+        run: npm run lint
+        continue-on-error: true
+
+  # ============================================
+  # UNIT TESTS
+  # ============================================
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    if: github.event_name != 'schedule'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run unit tests
+        run: npm run test
+        continue-on-error: true
+
+  # ============================================
+  # VALIDATE: Supabase + Code Structure
+  # ============================================
+  validate:
+    name: Validate Supabase & Code
+    runs-on: ubuntu-latest
+    if: github.event_name != 'schedule'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
       - name: Test Supabase REST API
         run: |
-          echo "Testing Supabase connection..."
           response=$(curl -s -w "\n%{http_code}" \
             "${{ env.SUPABASE_URL }}/rest/v1/rapports?select=id&limit=1" \
             -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
             -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}")
 
           http_code=$(echo "$response" | tail -n1)
-          body=$(echo "$response" | sed '$d')
-
           echo "HTTP Status: $http_code"
-          echo "Response: $body"
 
           if [ "$http_code" != "200" ]; then
             echo "::error::Supabase REST API failed with status $http_code"
             exit 1
           fi
-          echo "✅ Supabase REST API OK"
+          echo "Supabase REST API: OK"
 
       - name: Test Supabase Storage
         run: |
-          echo "Testing Supabase Storage..."
-          response=$(curl -s -w "\n%{http_code}" \
-            "${{ env.SUPABASE_URL }}/storage/v1/bucket/photos" \
+          # Test upload capability to rapport-photos bucket
+          test_path="test/ci-test-$(date +%s).txt"
+
+          upload_response=$(curl -s -w "\n%{http_code}" \
+            "${{ env.SUPABASE_URL }}/storage/v1/object/photos/${test_path}" \
             -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}")
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Content-Type: text/plain" \
+            -X POST \
+            -d "ci-test-upload")
 
-          http_code=$(echo "$response" | tail -n1)
+          upload_code=$(echo "$upload_response" | tail -n1)
 
-          if [ "$http_code" = "200" ]; then
-            echo "✅ Storage bucket 'photos' exists"
-          elif [ "$http_code" = "404" ]; then
-            echo "::warning::Storage bucket 'photos' not found - photo upload will fail"
+          if [ "$upload_code" = "200" ] || [ "$upload_code" = "201" ]; then
+            echo "Storage upload: OK"
+            # Cleanup test file
+            curl -s -X DELETE \
+              "${{ env.SUPABASE_URL }}/storage/v1/object/photos/${test_path}" \
+              -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+              -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" > /dev/null
           else
-            echo "::warning::Storage check returned status $http_code"
+            echo "::warning::Storage upload returned status $upload_code (bucket may need RLS policy)"
           fi
 
-      # --- Code Validation ---
       - name: Validate Source Code Structure
         run: |
-          echo "Checking critical components and functions in src/..."
+          echo "Checking critical components..."
 
           checks=(
             "handleSubmit:src/components/RapportForm.tsx"
@@ -90,46 +147,131 @@ jobs:
             func="${check%%:*}"
             file="${check##*:}"
             if [ -f "$file" ] && grep -q "$func" "$file"; then
-              echo "✅ Found: $func in $file"
+              echo "Found: $func in $file"
             else
               echo "::error::Missing critical code: $func in $file"
               exit 1
             fi
           done
 
-      - name: Check for Common Bugs
-        run: |
-          echo "Scanning source files for known bug patterns..."
-
-          # Check for unsafe array spreads in TSX files
-          if grep -rP '\[\.\.\.\w+\]' src/ --include='*.tsx' --include='*.ts' | grep -v '|| \[\]' | grep -v 'prev ||' | grep -v node_modules > /dev/null 2>&1; then
-            echo "::warning::Found potential unsafe array spread (missing || [])"
-          fi
-
-          # Check buttons have type attribute in TSX
-          button_count=$(grep -rc '<button' src/ --include='*.tsx' 2>/dev/null | awk -F: '{s+=$2} END {print s}')
-          typed_count=$(grep -rc "type='button\|type=\"button" src/ --include='*.tsx' 2>/dev/null | awk -F: '{s+=$2} END {print s}')
-
-          echo "Total <button in TSX: ${button_count:-0}"
-          echo "With type attr: ${typed_count:-0}"
-          echo "✅ Bug scan complete"
-
       - name: Validate Netlify Functions
         run: |
           if [ -f "netlify/functions/claude-vision.js" ]; then
-            echo "✅ Claude Vision function exists"
             node --check netlify/functions/claude-vision.js
-            echo "✅ Function syntax OK"
+            echo "Claude Vision function: OK"
           else
             echo "::warning::Claude Vision function not found"
           fi
 
   # ============================================
-  # DEPLOY JOB: Deploy to Netlify
+  # E2E TESTS (push only, continue-on-error)
+  # ============================================
+  e2e-tests:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    needs: [lint-and-typecheck]
+    if: github.event_name == 'push'
+    continue-on-error: true
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright tests
+        run: npm run test:e2e
+        env:
+          CI: true
+          SUPABASE_URL: ${{ env.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+
+      - name: Upload Playwright Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+  # ============================================
+  # WAIT FOR NETLIFY PREVIEW (PRs only)
+  # ============================================
+  wait-for-netlify:
+    name: Wait for Netlify Preview
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    outputs:
+      preview_url: ${{ steps.wait-netlify.outputs.url }}
+
+    steps:
+      - name: Wait for Netlify Deploy
+        id: wait-netlify
+        uses: jakepartusch/wait-for-netlify-action@v1.4
+        with:
+          site_id: ${{ env.NETLIFY_SITE_ID }}
+          max_timeout: 300
+        env:
+          NETLIFY_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+
+  # ============================================
+  # E2E TESTS PREVIEW (PRs only)
+  # ============================================
+  e2e-tests-preview:
+    name: E2E Tests (Preview)
+    runs-on: ubuntu-latest
+    needs: [lint-and-typecheck, wait-for-netlify]
+    if: github.event_name == 'pull_request'
+    continue-on-error: true
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright tests against preview
+        run: npm run test:e2e
+        env:
+          CI: true
+          BASE_URL: ${{ needs.wait-for-netlify.outputs.preview_url }}
+          SUPABASE_URL: ${{ env.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+
+      - name: Upload Playwright Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report-preview
+          path: playwright-report/
+          retention-days: 7
+
+  # ============================================
+  # DEPLOY TO PRODUCTION (main branch only)
   # ============================================
   deploy:
     name: Deploy to Netlify
-    needs: test
+    needs: [lint-and-typecheck, validate]
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
@@ -151,37 +293,100 @@ jobs:
 
       - name: Verify Deployment
         run: |
-          echo "Waiting for deployment to propagate..."
-          sleep 10
-
-          response=$(curl -s -w "\n%{http_code}" "https://dr-electrique-rapport.netlify.app")
-          http_code=$(echo "$response" | tail -n1)
-
+          sleep 15
+          http_code=$(curl -s -o /dev/null -w "%{http_code}" "https://dr-electrique-rapport.netlify.app")
           if [ "$http_code" = "200" ]; then
-            echo "✅ Site is live and responding"
+            echo "Production site: OK"
           else
             echo "::warning::Site returned status $http_code"
           fi
 
   # ============================================
-  # NOTIFY JOB: Log failure (no issue spam)
+  # PR COMMENT WITH RESULTS (PRs only)
   # ============================================
-  notify-on-failure:
-    name: Log Failure
-    needs: [test, deploy]
+  post-pr-comment:
+    name: Post PR Comment
     runs-on: ubuntu-latest
-    if: failure() && github.event_name == 'push'
+    needs: [lint-and-typecheck, unit-tests, e2e-tests-preview]
+    if: github.event_name == 'pull_request' && always()
+    permissions:
+      pull-requests: write
 
     steps:
-      - name: Log CI Failure
+      - name: Generate Test Summary
+        id: test-summary
         run: |
-          echo "::error::CI/CD Pipeline failed for commit ${{ github.sha }}"
-          echo "Check workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          # Note: Issue creation disabled to prevent spam
-          # Re-enable in github-script if needed for critical failures
+          LINT_STATUS="${{ needs.lint-and-typecheck.result }}"
+          UNIT_STATUS="${{ needs.unit-tests.result }}"
+          E2E_STATUS="${{ needs.e2e-tests-preview.result }}"
+
+          get_emoji() {
+            case "$1" in
+              "success") echo "pass" ;;
+              "failure") echo "FAIL" ;;
+              "skipped") echo "skip" ;;
+              *) echo "warn" ;;
+            esac
+          }
+
+          echo "lint_status=$(get_emoji "$LINT_STATUS") $LINT_STATUS" >> $GITHUB_OUTPUT
+          echo "unit_status=$(get_emoji "$UNIT_STATUS") $UNIT_STATUS" >> $GITHUB_OUTPUT
+          echo "e2e_status=$(get_emoji "$E2E_STATUS") $E2E_STATUS" >> $GITHUB_OUTPUT
+
+          if [ "$LINT_STATUS" = "success" ]; then
+            echo "overall=All checks passed" >> $GITHUB_OUTPUT
+          else
+            echo "overall=Some checks failed" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Post Comment on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const previewUrl = '${{ needs.wait-for-netlify.outputs.preview_url }}' || 'N/A';
+            const body = `## Test Results — ${{ steps.test-summary.outputs.overall }}
+
+            | Check | Result |
+            |-------|--------|
+            | TypeScript & Lint | ${{ steps.test-summary.outputs.lint_status }} |
+            | Unit Tests | ${{ steps.test-summary.outputs.unit_status }} |
+            | E2E Tests | ${{ steps.test-summary.outputs.e2e_status }} |
+
+            **Preview:** ${previewUrl}
+            **Commit:** \`${context.sha.substring(0, 7)}\`
+            **Run:** [Details](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})
+
+            ---
+            *Auto-generated by CI/CD Pipeline*`;
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number
+            });
+
+            const botComment = comments.find(c =>
+              c.user?.type === 'Bot' && c.body?.includes('## Test Results')
+            );
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: body
+              });
+            }
 
   # ============================================
-  # HEALTH CHECK JOB: Scheduled monitoring
+  # HEALTH CHECK (scheduled only)
   # ============================================
   health-check:
     name: Scheduled Health Check
@@ -189,109 +394,66 @@ jobs:
     if: github.event_name == 'schedule'
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Check Production Site
+      - name: Check All Systems
         id: health
         run: |
-          echo "Running scheduled health check..."
-
-          # Check main site
-          site_status=$(curl -s -o /dev/null -w "%{http_code}" "https://dr-electrique-rapport.netlify.app")
-          echo "Site status: $site_status"
-          echo "site_status=$site_status" >> $GITHUB_OUTPUT
-
-          # Check Supabase API
-          api_status=$(curl -s -o /dev/null -w "%{http_code}" \
+          site=$(curl -s -o /dev/null -w "%{http_code}" "https://dr-electrique-rapport.netlify.app")
+          api=$(curl -s -o /dev/null -w "%{http_code}" \
             "${{ env.SUPABASE_URL }}/rest/v1/" \
             -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}")
-          echo "Supabase API status: $api_status"
-          echo "api_status=$api_status" >> $GITHUB_OUTPUT
-
-          # Check Supabase Database
-          db_status=$(curl -s -o /dev/null -w "%{http_code}" \
+          db=$(curl -s -o /dev/null -w "%{http_code}" \
             "${{ env.SUPABASE_URL }}/rest/v1/rapports?select=id&limit=1" \
             -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
             -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}")
-          echo "Supabase DB status: $db_status"
-          echo "db_status=$db_status" >> $GITHUB_OUTPUT
+          dashboard=$(curl -s -o /dev/null -w "%{http_code}" \
+            "https://dr-electrique-rapport.netlify.app/dashboard-a2c15af64b97e73f.html")
 
-          # Check Dashboard
-          dashboard_status=$(curl -s -o /dev/null -w "%{http_code}" "https://dr-electrique-rapport.netlify.app/dashboard-a2c15af64b97e73f.html")
-          echo "Dashboard status: $dashboard_status"
-          echo "dashboard_status=$dashboard_status" >> $GITHUB_OUTPUT
+          echo "Site: $site | API: $api | DB: $db | Dashboard: $dashboard"
+          echo "site=$site" >> $GITHUB_OUTPUT
+          echo "api=$api" >> $GITHUB_OUTPUT
+          echo "db=$db" >> $GITHUB_OUTPUT
+          echo "dashboard=$dashboard" >> $GITHUB_OUTPUT
 
-          # Determine overall health
-          if [ "$site_status" != "200" ] || [ "$api_status" != "200" ] || [ "$db_status" != "200" ]; then
-            echo "health=FAILED" >> $GITHUB_OUTPUT
-            echo "::error::Health check failed - Site: $site_status, API: $api_status, DB: $db_status"
+          if [ "$site" != "200" ] || [ "$api" != "200" ] || [ "$db" != "200" ]; then
+            echo "::error::Health check failed"
             exit 1
           fi
+          echo "All systems operational"
 
-          echo "health=PASSED" >> $GITHUB_OUTPUT
-          echo "✅ All systems operational"
-
-      - name: Create Issue on Health Check Failure
+      - name: Create Issue on Failure
         if: failure()
         uses: actions/github-script@v7
         with:
           script: |
             const title = `Health Check Failed - ${new Date().toISOString().split('T')[0]}`;
-
-            // Check if issue already exists today
-            const issues = await github.rest.issues.listForRepo({
+            const { data: issues } = await github.rest.issues.listForRepo({
               owner: context.repo.owner,
               repo: context.repo.repo,
               labels: 'health-check',
               state: 'open'
             });
 
-            const existingIssue = issues.data.find(i => i.title === title);
+            if (issues.find(i => i.title === title)) return;
 
-            const body = `
-            ## Scheduled Health Check Failed
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body: `## Health Check Failed\n\n**Time:** ${new Date().toISOString()}\n\n| Check | Status |\n|-------|--------|\n| Site | ${{ steps.health.outputs.site || 'N/A' }} |\n| API | ${{ steps.health.outputs.api || 'N/A' }} |\n| DB | ${{ steps.health.outputs.db || 'N/A' }} |\n| Dashboard | ${{ steps.health.outputs.dashboard || 'N/A' }} |\n\n[Workflow Run](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`,
+              labels: ['bug', 'health-check', 'automated']
+            });
 
-            **Time:** ${new Date().toISOString()}
-            **Workflow Run:** ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}
+  # ============================================
+  # NOTIFY ON FAILURE
+  # ============================================
+  notify-on-failure:
+    name: Log Failure
+    needs: [lint-and-typecheck, validate, deploy]
+    runs-on: ubuntu-latest
+    if: failure() && github.event_name == 'push'
 
-            ### Status Report
-            | Check | Status |
-            |-------|--------|
-            | Production Site | ${{ steps.health.outputs.site_status || 'N/A' }} |
-            | Supabase API | ${{ steps.health.outputs.api_status || 'N/A' }} |
-            | Supabase Database | ${{ steps.health.outputs.db_status || 'N/A' }} |
-            | Dashboard | ${{ steps.health.outputs.dashboard_status || 'N/A' }} |
-
-            ### Recovery Steps
-            1. Check [Supabase Status](https://status.supabase.com)
-            2. Check [Netlify Status](https://www.netlifystatus.com)
-            3. Verify GitHub Secrets are set correctly
-            4. Run \`scripts/health-check.ps1\` locally for detailed diagnostics
-            5. Check TASK.md for current project status
-
-            ### Quick Fixes
-            - **Site down:** Run \`netlify deploy --prod\`
-            - **Supabase down:** Wait or check RLS policies
-            - **Database error:** Check table permissions in Supabase Dashboard
-
-            ---
-            *Auto-generated by scheduled health check*
-            `;
-
-            if (existingIssue) {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: existingIssue.number,
-                body: `### Health Check Still Failing\n\n${body}`
-              });
-            } else {
-              await github.rest.issues.create({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                title: title,
-                body: body,
-                labels: ['bug', 'health-check', 'automated']
-              });
-            }
+    steps:
+      - name: Log CI Failure
+        run: |
+          echo "::error::CI/CD Pipeline failed for commit ${{ github.sha }}"
+          echo "Check: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"

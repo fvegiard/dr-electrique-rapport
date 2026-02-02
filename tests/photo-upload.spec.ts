@@ -1,7 +1,6 @@
 import { test, expect } from '@playwright/test';
 import {
   getPhotosForRapport,
-  verifyPhotosInStorage,
   cleanupTestRapport,
   getMostRecentRapport
 } from './helpers/supabase-test';

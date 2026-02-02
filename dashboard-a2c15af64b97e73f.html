@@ -835,6 +835,23 @@
                       </div>
                       {isExpanded && (
                         <div className='border-t border-white/10 p-4 bg-black/30 space-y-4'>
+                          {/* EN-TÊTE: adresse, météo, température */}
+                          <div className='flex flex-wrap gap-4 text-sm text-gray-400 pb-3 border-b border-white/5'>
+                            {rapport.date && (
+                              <span>📅 {formatDate(rapport.date)}</span>
+                            )}
+                            {rapport.adresse && (
+                              <span>📍 {rapport.adresse}</span>
+                            )}
+                            {rapport.meteo && (
+                              <span>{rapport.meteo === 'soleil' ? '☀️' : rapport.meteo === 'nuageux' ? '☁️' : rapport.meteo === 'pluie' ? '🌧️' : rapport.meteo === 'neige' ? '❄️' : '🌤️'} {rapport.meteo}</span>
+                            )}
+                            {rapport.temperature != null && rapport.temperature !== '' && (
+                              <span>🌡️ {rapport.temperature}°C</span>
+                            )}
+                          </div>
+
+                          {/* MAIN D'OEUVRE avec descriptions */}
                           {rapport.mainOeuvre?.filter(m => m.employe).length > 0 && (
                             <div>
                               <div className='text-xs text-green-400 mb-2 font-mono'>
@@ -843,12 +860,20 @@
                               {rapport.mainOeuvre
                                 .filter(m => m.employe)
                                 .map((m, i) => (
-                                  <div key={i} className='text-sm text-gray-300'>
-                                    {m.employe}: {m.heureDebut} - {m.heureFin}
+                                  <div key={i} className='mb-2 p-2 rounded-lg bg-black/20'>
+                                    <div className='flex items-center justify-between text-sm'>
+                                      <span className='text-white font-medium'>{m.employe}</span>
+                                      <span style={{color: '#ffc800'}}>{m.heureDebut} - {m.heureFin}</span>
+                                    </div>
+                                    {m.description && (
+                                      <div className='text-xs text-gray-400 mt-1'>{m.description}</div>
+                                    )}
                                   </div>
                                 ))}
                             </div>
                           )}
+
+                          {/* MATÉRIAUX */}
                           {rapport.materiaux?.filter(m => m.item).length > 0 && (
                             <div>
                               <div className='text-xs text-green-400 mb-2 font-mono'>MATERIAUX</div>
@@ -864,16 +889,100 @@
                                         color: '#9d00ff',
                                       }}
                                     >
-                                      {m.item} x{m.quantite}
+                                      {m.item} x{m.quantite} {m.unite || ''}
                                     </span>
                                   ))}
                               </div>
                             </div>
                           )}
+
+                          {/* ÉQUIPEMENTS */}
+                          {rapport.equipements?.filter(eq => eq.nom).length > 0 && (
+                            <div>
+                              <div className='text-xs text-green-400 mb-2 font-mono'>EQUIPEMENTS</div>
+                              {rapport.equipements
+                                .filter(eq => eq.nom)
+                                .map((eq, i) => (
+                                  <div key={i} className='text-sm text-gray-300 mb-1'>
+                                    <span className='text-white'>{eq.nom}</span>
+                                    {eq.heures && <span className='ml-2' style={{color: '#ffc800'}}>{eq.heures}h</span>}
+                                    {eq.description && <span className='ml-2 text-gray-500'>— {eq.description}</span>}
+                                  </div>
+                                ))}
+                            </div>
+                          )}
+
+                          {/* SOUS-TRAITANTS */}
+                          {rapport.soustraitants?.filter(s => s.entreprise).length > 0 && (
+                            <div>
+                              <div className='text-xs text-green-400 mb-2 font-mono'>SOUS-TRAITANTS</div>
+                              {rapport.soustraitants
+                                .filter(s => s.entreprise)
+                                .map((s, i) => (
+                                  <div key={i} className='text-sm text-gray-300 mb-1'>
+                                    <span className='text-white font-medium'>{s.entreprise}</span>
+                                    {s.nbPersonnes && <span className='ml-2 text-cyan-400'>{s.nbPersonnes} pers.</span>}
+                                    {s.heures && <span className='ml-2' style={{color: '#ffc800'}}>{s.heures}h</span>}
+                                    {s.description && <div className='text-xs text-gray-500 mt-0.5'>{s.description}</div>}
+                                  </div>
+                                ))}
+                            </div>
+                          )}
+
+                          {/* ORDRES DE TRAVAIL */}
+                          {rapport.ordresTravail?.filter(o => o.description).length > 0 && (
+                            <div>
+                              <div className='text-xs text-green-400 mb-2 font-mono'>ORDRES DE TRAVAIL</div>
+                              {rapport.ordresTravail
+                                .filter(o => o.description)
+                                .map((o, i) => (
+                                  <div key={i} className='flex items-center justify-between text-sm mb-1 p-2 rounded-lg bg-black/20'>
+                                    <div className='flex items-center gap-2'>
+                                      <span className='text-gray-300'>{o.description}</span>
+                                      <span className={`px-2 py-0.5 rounded text-[10px] ${o.status === 'termine' ? 'bg-green-500/20 text-green-400' : o.status === 'annule' ? 'bg-red-500/20 text-red-400' : 'bg-blue-500/20 text-blue-400'}`}>
+                                        {o.status || 'en_cours'}
+                                      </span>
+                                    </div>
+                                    {o.isExtra && (
+                                      <span className='font-bold' style={{color: '#ffc800'}}>💰 ${o.montantExtra}</span>
+                                    )}
+                                  </div>
+                                ))}
+                            </div>
+                          )}
+
+                          {/* ÉVÉNEMENTS */}
+                          {rapport.evenements && (
+                            <div>
+                              <div className='text-xs text-green-400 mb-2 font-mono'>EVENEMENTS</div>
+                              <div className='text-sm text-gray-300 whitespace-pre-wrap'>{rapport.evenements}</div>
+                            </div>
+                          )}
+
+                          {/* PROBLÈMES DE SÉCURITÉ */}
+                          {rapport.problemesSecurite && (
+                            <div className='p-3 rounded-lg' style={{background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)'}}>
+                              <div className='text-xs text-red-400 mb-2 font-mono'>⚠️ PROBLEMES DE SECURITE</div>
+                              <div className='text-sm text-red-300 whitespace-pre-wrap'>{rapport.problemesSecurite}</div>
+                            </div>
+                          )}
+
+                          {/* NOTES GÉNÉRALES */}
                           {rapport.notesGenerales && (
                             <div>
-                              <div className='text-xs text-green-400 mb-2 font-mono'>NOTES</div>
-                              <div className='text-sm text-gray-300'>{rapport.notesGenerales}</div>
+                              <div className='text-xs text-green-400 mb-2 font-mono'>NOTES GENERALES</div>
+                              <div className='text-sm text-gray-300 whitespace-pre-wrap'>{rapport.notesGenerales}</div>
+                            </div>
+                          )}
+
+                          {/* PHOTOS résumé */}
+                          {rapport.totalPhotos > 0 && (
+                            <div className='flex gap-3 text-xs text-gray-500'>
+                              <span>📷 {rapport.totalPhotos} photo(s)</span>
+                              {rapport.photosGenerales?.length > 0 && <span>Générales: {rapport.photosGenerales.length}</span>}
+                              {rapport.photosAvant?.length > 0 && <span>Avant: {rapport.photosAvant.length}</span>}
+                              {rapport.photosApres?.length > 0 && <span>Après: {rapport.photosApres.length}</span>}
+                              {rapport.photosProblemes?.length > 0 && <span className='text-red-400'>Problèmes: {rapport.photosProblemes.length}</span>}
                             </div>
                           )}
                         </div>

@@ -3,19 +3,19 @@
 ## Repository Stats
 - **Total Files:** 85
 - **Languages:** ts,js,sh
-- **Last Updated:** 2026-02-02 00:12 UTC
+- **Last Updated:** 2026-02-02 00:14 UTC
 
 ## Recent Commits
 ```
-- ba19df2 fix(types): eliminate all 14 no-explicit-any warnings (12 seconds ago)
-- de86b39 chore: auto-update context (4 minutes ago)
-- 0e209ec refactor(ci): consolidate 3 workflows into single CI/CD pipeline (4 minutes ago)
-- b713c46 chore: auto-update context (5 hours ago)
-- 5a0401c fix(ci): update validation to search React source files instead of index.html (5 hours ago)
+- 85e5720 fix(e2e): rewrite Playwright tests with correct React selectors (8 seconds ago)
+- 9575433 chore: auto-update context (2 minutes ago)
+- ba19df2 fix(types): eliminate all 14 no-explicit-any warnings (2 minutes ago)
+- de86b39 chore: auto-update context (6 minutes ago)
+- 0e209ec refactor(ci): consolidate 3 workflows into single CI/CD pipeline (6 minutes ago)
 ```
 
 ## Open Issues
-38	OPEN	Réécrire les tests E2E Playwright avec les bons selectors React	enhancement	2026-02-01T21:15:35Z
+
 
 ## Directory Structure
 ```

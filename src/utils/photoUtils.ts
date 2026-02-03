@@ -222,28 +222,31 @@ export const processPhoto = async (
   let storagePath: string | null = null;
 
   if (supabase && projectId) {
-    const uploadResult = await uploadPhotoToStorage(
-      supabase,
-      compressed.blob,
-      file.name,
-      category,
-      projectId
-    );
+    try {
+      const uploadResult = await uploadPhotoToStorage(
+        supabase,
+        compressed.blob,
+        file.name,
+        category,
+        projectId
+      );
 
-    if (uploadResult.success && uploadResult.url) {
-      storageUrl = uploadResult.url;
-      storagePath = uploadResult.path || null;
-      console.log('[Photo] Uploaded to storage:', storagePath);
-    } else {
-      throw new Error(`Upload photo echoue: ${uploadResult.error || 'Erreur inconnue'}`);
+      if (uploadResult.success && uploadResult.url) {
+        storageUrl = uploadResult.url;
+        storagePath = uploadResult.path || null;
+        console.log('[Photo] Uploaded to storage:', storagePath);
+      } else {
+        console.warn('[Photo] Storage upload failed, keeping local preview:', uploadResult.error);
+      }
+    } catch (err: unknown) {
+      console.warn('[Photo] Storage upload error, keeping local preview:', err instanceof Error ? err.message : err);
     }
-  } else {
-    throw new Error('Supabase client ou projectId manquant');
   }
 
   return {
-    data: storageUrl,
+    data: base64Preview,
     preview: base64Preview,
+    blob: compressed.blob,
     storagePath,
     storageUrl,
     metadata: {

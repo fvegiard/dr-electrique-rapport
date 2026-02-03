@@ -4,10 +4,10 @@
 [functions]
   directory = "netlify/functions"
 
-# Dashboard redirect (must be before catch-all)
+# SPA catch-all: send all routes to index.html for React Router
 [[redirects]]
-  from = "/dashboard"
-  to = "/dashboard-a2c15af64b97e73f.html"
+  from = "/*"
+  to = "/index.html"
   status = 200
 
 [build]
@@ -16,13 +16,13 @@
   functions = "netlify/functions"
 
 [build.environment]
-  NODE_VERSION = "18"
+  NODE_VERSION = "22"
 
 [context.production]
   command = "npm run build"
 
 [context.deploy-preview]
-  command = "echo 'Deploy preview ready'"
+  command = "npm run build"
 
 # Security headers
 [[headers]]

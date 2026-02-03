@@ -27,8 +27,9 @@ export interface PhotoMetadata {
 
 export interface Photo {
   id: string;
-  data?: string; // Base64
-  preview?: string; // For display
+  data?: string;
+  preview?: string;
+  blob?: Blob;
   storagePath?: string;
   storageUrl?: string;
   timestamp: string;

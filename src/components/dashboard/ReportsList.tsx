@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import type { ReportFilter } from '../../hooks/useDashboardData';
 
 interface RapportRow {
   id: string;
@@ -27,6 +28,8 @@ interface PhotoRow {
 interface ReportsListProps {
   rapports: RapportRow[];
   photos: Map<string, PhotoRow[]>;
+  filter: ReportFilter;
+  onFilterChange: (f: ReportFilter) => void;
 }
 
 const METEO_ICONS: Record<string, string> = {
@@ -36,32 +39,57 @@ const METEO_ICONS: Record<string, string> = {
   neige: '❄️',
 };
 
+const FILTER_LABELS: { key: ReportFilter; label: string }[] = [
+  { key: 'tous', label: 'Tous' },
+  { key: 'aujourdhui', label: "Aujourd'hui" },
+  { key: 'semaine', label: 'Semaine' },
+];
+
 const formatDate = (d: string): string => {
   const date = new Date(d + 'T00:00:00');
   return date.toLocaleDateString('fr-CA', { weekday: 'short', day: 'numeric', month: 'short' });
 };
 
-export const ReportsList: React.FC<ReportsListProps> = ({ rapports, photos }) => {
+export const ReportsList: React.FC<ReportsListProps> = ({ rapports, photos, filter, onFilterChange }) => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
-
-  if (rapports.length === 0) {
-    return (
-      <div className="glass rounded-2xl p-6 text-center animate-slide-up">
-        <p className="text-gray-500">Aucun rapport trouvé</p>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-2 animate-slide-up">
-      <h3 className="font-bebas text-lg text-white tracking-wide mb-3">RAPPORTS RÉCENTS</h3>
-      {rapports.slice(0, 20).map((r) => {
+      <div className="flex items-center justify-between mb-1">
+        <h3 className="font-bebas text-lg text-white tracking-wide">
+          RAPPORTS RÉCENTS ({rapports.length})
+        </h3>
+      </div>
+
+      <div className="flex gap-1 mb-3">
+        {FILTER_LABELS.map((f) => (
+          <button
+            key={f.key}
+            type="button"
+            onClick={() => onFilterChange(f.key)}
+            className={`px-3 py-1 rounded-full text-[11px] font-medium transition-colors ${
+              filter === f.key
+                ? 'bg-[#E63946]/20 text-[#E63946] border border-[#E63946]/30'
+                : 'bg-white/5 text-gray-500 border border-white/5 hover:text-gray-300'
+            }`}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+
+      {rapports.length === 0 && (
+        <div className="glass rounded-2xl p-6 text-center">
+          <p className="text-gray-500">Aucun rapport pour cette période</p>
+        </div>
+      )}
+
+      {rapports.slice(0, 25).map((r) => {
         const isExpanded = expandedId === r.id;
         const rapportPhotos = photos.get(r.id) ?? [];
 
         return (
           <div key={r.id} className="glass rounded-xl overflow-hidden">
-            {/* Header row — clickable */}
             <button
               type="button"
               onClick={() => setExpandedId(isExpanded ? null : r.id)}
@@ -82,6 +110,9 @@ export const ReportsList: React.FC<ReportsListProps> = ({ rapports, photos }) =>
                 {(r.total_heures_mo ?? 0) > 0 && (
                   <span className="text-xs text-blue-400 font-medium">{r.total_heures_mo}h</span>
                 )}
+                {r.problemes_securite && r.problemes_securite.trim().length > 0 && (
+                  <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-400">⚠</span>
+                )}
                 {(r.total_photos ?? 0) > 0 && (
                   <span className="text-xs text-green-400">{r.total_photos}📷</span>
                 )}
@@ -92,28 +123,24 @@ export const ReportsList: React.FC<ReportsListProps> = ({ rapports, photos }) =>
                   stroke="currentColor"
                   strokeWidth="2"
                 >
+                  <title>Détails</title>
                   <path d="M6 9l6 6 6-6" />
                 </svg>
               </div>
             </button>
 
-            {/* Expanded detail */}
             {isExpanded && (
               <div className="px-4 pb-4 border-t border-white/5 pt-3 space-y-3 animate-slide-up">
-                {/* Address */}
                 {r.adresse && (
-                  <div className="text-xs text-gray-400">
-                    📍 {r.adresse}
-                  </div>
+                  <div className="text-xs text-gray-400">📍 {r.adresse}</div>
                 )}
 
-                {/* Workers */}
                 {(r.main_oeuvre ?? []).length > 0 && (
                   <div>
                     <div className="text-[10px] text-gray-500 uppercase mb-1">Main d'oeuvre</div>
                     <div className="space-y-1">
-                      {(r.main_oeuvre ?? []).filter(w => w.employe).map((w, i) => (
-                        <div key={i} className="flex items-center justify-between text-xs">
+                      {(r.main_oeuvre ?? []).filter(w => w.employe).map((w) => (
+                        <div key={`${r.id}-${w.employe}-${w.heureDebut}`} className="flex items-center justify-between text-xs">
                           <span className="text-gray-300">{w.employe}</span>
                           <span className="text-blue-400">{w.heureDebut} → {w.heureFin}</span>
                         </div>
@@ -122,13 +149,12 @@ export const ReportsList: React.FC<ReportsListProps> = ({ rapports, photos }) =>
                   </div>
                 )}
 
-                {/* Materials */}
                 {(r.materiaux ?? []).filter(m => m.item).length > 0 && (
                   <div>
                     <div className="text-[10px] text-gray-500 uppercase mb-1">Matériaux</div>
                     <div className="flex flex-wrap gap-1">
-                      {(r.materiaux ?? []).filter(m => m.item).map((m, i) => (
-                        <span key={i} className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                      {(r.materiaux ?? []).filter(m => m.item).map((m) => (
+                        <span key={`${r.id}-${m.item}-${m.quantite}`} className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
                           {m.quantite} {m.unite} {m.item}
                         </span>
                       ))}
@@ -136,14 +162,12 @@ export const ReportsList: React.FC<ReportsListProps> = ({ rapports, photos }) =>
                   </div>
                 )}
 
-                {/* Extras */}
                 {r.has_extras && (r.total_extras ?? 0) > 0 && (
                   <div className="flex items-center gap-2 text-xs">
                     <span className="text-[#E63946] font-medium">💰 Extras: {r.total_extras?.toFixed(2)} $</span>
                   </div>
                 )}
 
-                {/* Photos */}
                 {rapportPhotos.length > 0 && (
                   <div>
                     <div className="text-[10px] text-gray-500 uppercase mb-1">Photos ({rapportPhotos.length})</div>
@@ -161,7 +185,6 @@ export const ReportsList: React.FC<ReportsListProps> = ({ rapports, photos }) =>
                   </div>
                 )}
 
-                {/* Notes */}
                 {r.notes_generales && (
                   <div>
                     <div className="text-[10px] text-gray-500 uppercase mb-1">Notes</div>
@@ -169,7 +192,6 @@ export const ReportsList: React.FC<ReportsListProps> = ({ rapports, photos }) =>
                   </div>
                 )}
 
-                {/* Safety */}
                 {r.problemes_securite && (
                   <div className="bg-red-500/5 border border-red-500/20 rounded-lg p-2">
                     <div className="text-[10px] text-red-400 uppercase mb-1">⚠️ Sécurité</div>

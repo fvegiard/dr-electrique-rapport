@@ -6,8 +6,7 @@
   "main": "index.html",
   "scripts": {
     "dev": "vite --host --mode development",
-    "build": "mkdir -p dist && cp rapport-form.html dist/index.html && cp dashboard-a2c15af64b97e73f.html dist/",
-    "build:vite": "vite build && cp dashboard-a2c15af64b97e73f.html dist/",
+    "build": "vite build",
     "preview": "vite preview --host",
     "serve": "vite preview --host --port 8003",
     "test": "vitest --run",
@@ -51,11 +50,12 @@
     "@anthropic-ai/sdk": "^0.32.0",
     "@supabase/supabase-js": "^2.46.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "react-router-dom": "^7.13.0"
   },
   "devDependencies": {
-    "@playwright/test": "^1.50.0",
     "@modelcontextprotocol/sdk": "^1.0.0",
+    "@playwright/test": "^1.50.0",
     "@testing-library/jest-dom": "^6.0.0",
     "@testing-library/react": "^16.0.0",
     "@testing-library/user-event": "^14.0.0",

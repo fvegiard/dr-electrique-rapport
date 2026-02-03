@@ -1,0 +1,15 @@
+services:
+  app:
+    build: .
+    container_name: dr-electrique-app
+    ports:
+      - "3001:3001"
+      - "8003:8003"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - VITE_HOST=0.0.0.0
+      - CHOKIDAR_USEPOLLING=true
+    command: npm run dev
+    restart: unless-stopped

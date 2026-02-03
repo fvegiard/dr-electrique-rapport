@@ -404,7 +404,7 @@ const RapportForm: React.FC = () => {
         </div>
 
         {/* MAIN D'OEUVRE */}
-        <Section icon={Icons.clock} title="TEMPS - MAIN D'OEUVRE" subtitle='Heures début/fin' color='#3b82f6'>
+        <Section icon={Icons.clock} title="TEMPS - MAIN D'OEUVRE" subtitle='Heures début/fin' color='#E63946'>
           <div className='space-y-4'>
             {(data.mainOeuvre || []).map((row, idx) => (
               <div key={row.id} className='bg-black/20 rounded-xl p-3 space-y-3 animate-slide-up'>
@@ -462,7 +462,7 @@ const RapportForm: React.FC = () => {
             <button
               type='button'
               onClick={() => update('mainOeuvre', [...(data.mainOeuvre || []), { id: generateId(), employe: '', heureDebut: '06:00', heureFin: '14:15', description: '' }])}
-              className='w-full py-3 border-2 border-dashed border-blue-500/40 rounded-xl text-blue-500 flex items-center justify-center gap-2 text-sm font-medium'
+              className='w-full py-3 border-2 border-dashed border-[#E63946]/40 rounded-xl text-[#E63946] flex items-center justify-center gap-2 text-sm font-medium transition-all active:scale-[0.98]'
             >
               {Icons.plus} Ajouter employé
             </button>
@@ -470,7 +470,7 @@ const RapportForm: React.FC = () => {
         </Section>
 
         {/* MATÉRIAUX */}
-        <Section icon={Icons.box} title='MATÉRIAUX UTILISÉS' subtitle='Scanner IA ou manuel' color='#f59e0b'>
+        <Section icon={Icons.box} title='MATÉRIAUX UTILISÉS' subtitle='Scanner IA ou manuel' color='#E63946'>
           <div className='space-y-4'>
             <MaterialScanner onMaterialDetected={handleMaterialDetected} />
             <div className='border-t border-white/10 pt-4'>
@@ -483,14 +483,14 @@ const RapportForm: React.FC = () => {
                   { key: 'unite', placeholder: 'Unit', type: 'select', options: ['unité', 'pi', 'm', 'rouleau', 'boîte'], width: '80px' },
                 ]}
                 addLabel='Ajouter matériau'
-                color='#f59e0b'
+                color='#E63946'
               />
             </div>
           </div>
         </Section>
 
         {/* PHOTOS */}
-        <Section icon={Icons.camera} title='PHOTOS CHANTIER' subtitle='Avec géolocalisation' color='#22c55e'>
+        <Section icon={Icons.camera} title='PHOTOS CHANTIER' subtitle='Avec géolocalisation' color='#E63946'>
           <div className='space-y-6'>
             <PhotoUploadGPS
               photos={data.photosGenerales}
@@ -519,7 +519,7 @@ const RapportForm: React.FC = () => {
               category='avant'
               projectId={data.projet}
               supabase={supabase}
-              accent='#f59e0b'
+              accent='#E63946'
             />
             <PhotoUploadGPS
               photos={data.photosApres}
@@ -534,7 +534,7 @@ const RapportForm: React.FC = () => {
               category='apres'
               projectId={data.projet}
               supabase={supabase}
-              accent='#3b82f6'
+              accent='#E63946'
             />
              <PhotoUploadGPS
               photos={data.photosProblemes}
@@ -558,7 +558,7 @@ const RapportForm: React.FC = () => {
         <button
           type='submit'
           disabled={step === 'submitting'}
-          className='w-full py-4 bg-[#E63946] text-white font-bebas text-2xl tracking-wide rounded-xl shadow-lg shadow-red-600/20 active:scale-[0.98] transition-all disabled:opacity-50 disabled:scale-100'
+          className='w-full py-4 bg-[#E63946] text-white font-bebas text-2xl tracking-wide rounded-xl shadow-lg shadow-red-600/20 active:scale-[0.98] transition-all disabled:opacity-50 disabled:scale-100 animate-pulse-btn'
         >
           {step === 'submitting' ? 'ENVOI EN COURS...' : 'ENVOYER LE RAPPORT'}
         </button>

@@ -10,10 +10,10 @@ interface SectionProps {
 
 const Section: React.FC<SectionProps> = ({ icon, title, subtitle, color, children }) => {
   return (
-    <div className='rounded-2xl overflow-hidden bg-[#141414] border border-white/5 animate-slide-up'>
+    <div className='rounded-2xl overflow-hidden bg-[#141414] border border-white/5 animate-slide-up shadow-xl'>
       <div
         className='section-header px-4 py-3 flex items-center gap-3'
-        style={{ background: `linear-gradient(135deg, ${color || '#666'} 0%, color-mix(in srgb, ${color || '#666'} 70%, black) 100%)` }}
+        style={{ '--section-color': color } as React.CSSProperties}
       >
         <span className='text-white/90'>{icon}</span>
         <div>

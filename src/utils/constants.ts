@@ -12,6 +12,7 @@ export const EMPLOYES: Employee[] = [
 ];
 
 export const WORKERS_NAMES: string[] = EMPLOYES.map(e => e.nom);
+export const WORKERS = WORKERS_NAMES;
 
 export const PROJETS: Project[] = [
   { id: 'PRJ-001', nom: 'Alexis Nihon', client: 'Cominar' },
